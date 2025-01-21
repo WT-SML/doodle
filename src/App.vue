@@ -78,7 +78,7 @@ onMounted(() => {
         </button>
       </div>
       <!-- 画布 -->
-      <div class="flex-grow bg-[#E0E0E0]">
+      <div class="flex-grow bg-[#eee]">
         <div ref="osdRef" class="osd h-full"></div>
       </div>
     </div>

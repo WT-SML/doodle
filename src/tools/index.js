@@ -6,9 +6,9 @@ export const randomPoints = (viewer, count = 0) => {
     const x = Math.random() * dziWidth
     const y = Math.random() * dziHeight
     points.push({
-      id: Date.now() - count + i,
+      id: String(Date.now() - count + i),
       type: "POINT",
-      meta: { cx: x, cy: y },
+      pos: [x, y],
     })
   }
   return points
