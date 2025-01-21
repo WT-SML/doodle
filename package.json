@@ -1,0 +1,23 @@
+{
+  "name": "doodle",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vueuse/core": "^12.4.0",
+    "lodash": "^4.17.21",
+    "openseadragon": "^5.0.1",
+    "pixi.js": "^8.6.6",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "unocss": "^65.4.2",
+    "vite": "^6.0.5"
+  }
+}
