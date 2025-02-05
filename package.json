@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@vueuse/core": "^12.4.0",
+    "geometric": "^2.5.5",
     "lodash": "^4.17.21",
     "openseadragon": "^5.0.1",
     "pixi.js": "^8.6.6",
+    "rbush": "^4.0.1",
     "vue": "^3.5.13"
   },
   "devDependencies": {
