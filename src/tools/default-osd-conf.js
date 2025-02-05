@@ -18,4 +18,5 @@ export const defaultOsdConf = {
   // autoResize: true, // 设置为 false 以防止轮询查看器大小更改。对于提供自定义调整大小行为很有用。
   // preserveImageSizeOnResize: true, // 设置为 true 以在调整查看器大小时保留图像大小。这需要 autoResize=true（默认）。
   // minScrollDeltaTime: 50, // 画布滚动事件之间的毫秒数。此值有助于标准化不同设备之间的画布滚动事件的速率，从而使速度较快的设备减速到足以使缩放控制更易于管理。
+  crossOriginPolicy: true,
 }

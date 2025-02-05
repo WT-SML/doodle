@@ -91,58 +91,34 @@ export const pointInShape = (doodle, point, shape, buffer) => {
   return shapeTypePointInShapeFuncMap[shape.type](point, shape, buffer)
 }
 
-// 获取shape的面积 TODO:
+// 获取shape的面积
 export const getShapeArea = (doodle, shape) => {
   const shapeTypeGetShapeAreaFuncMap = {
     // 移动
     [doodle.tools.move]: (shape) => {},
     // 矩形
     [doodle.tools.rect]: (shape) => {
-      return shape.meta.width * shape.meta.height
+      return shape.pos[2] * shape.pos[3]
     },
     // 多边形
     [doodle.tools.polygon]: (shape) => {
-      let area = 0
-      const points = shape.meta.points
-      let j = points.length - 1
-
-      for (let i = 0; i < points.length; i++) {
-        area += (points[j].x + points[i].x) * (points[j].y - points[i].y)
-        j = i
-      }
-      return Math.abs(0.5 * area)
+      return getPolygonArea(shape.pos)
     },
     // 圆
     [doodle.tools.circle]: (shape) => {
-      return shape.meta.rx * shape.meta.ry * Math.PI
+      return shape.pos[2] * shape.pos[2] * Math.PI
     },
     // 椭圆
     [doodle.tools.ellipse]: (shape) => {
-      return shape.meta.rx * shape.meta.ry * Math.PI
+      return shape.pos[2] * shape.pos[3] * Math.PI
     },
     // 路径
     [doodle.tools.path]: (shape) => {
-      let area = 0
-      const points = shape.meta.d
-      let j = points.length - 1
-
-      for (let i = 0; i < points.length; i++) {
-        area += (points[j].x + points[i].x) * (points[j].y - points[i].y)
-        j = i
-      }
-      return Math.abs(0.5 * area)
+      return getPolygonArea(shape.pos)
     },
     // 闭合路径
     [doodle.tools.closed_path]: (shape) => {
-      let area = 0
-      const points = shape.meta.d
-      let j = points.length - 1
-
-      for (let i = 0; i < points.length; i++) {
-        area += (points[j].x + points[i].x) * (points[j].y - points[i].y)
-        j = i
-      }
-      return Math.abs(0.5 * area)
+      return getPolygonArea(shape.pos)
     },
     // 直线
     [doodle.tools.line]: (shape) => {
@@ -158,6 +134,20 @@ export const getShapeArea = (doodle, shape) => {
     },
   }
   return shapeTypeGetShapeAreaFuncMap[shape.type](shape)
+}
+
+// 获取多边形面积
+export const getPolygonArea = (pos) => {
+  let area = 0
+  const n = pos.length / 2
+  for (let i = 0; i < n; i++) {
+    const x1 = pos[2 * i]
+    const y1 = pos[2 * i + 1]
+    const x2 = pos[2 * ((i + 1) % n)]
+    const y2 = pos[2 * ((i + 1) % n) + 1]
+    area += x1 * y2 - x2 * y1
+  }
+  return Math.abs(area) / 2
 }
 
 // 多边形工具下距离初始点过近
@@ -214,6 +204,103 @@ export const getHoverShape = (doodle) => {
       return getShapeArea(doodle, shapeA) - getShapeArea(doodle, shapeB)
     })
     return shapes.find((item) => item.id === detailedHitBounds[0].id)
+  }
+  return null
+}
+
+// 生成锚点列表
+export const generateAnchors = (doodle) => {
+  if (!doodle.tempShape) {
+    return []
+  }
+  if (!doodle.tempShape.id) {
+    return []
+  }
+  const shapeGetAnchorsFuncMap = {
+    // 矩形
+    [doodle.tools.rect]: (shape) => {
+      return [
+        // 左上
+        { x: shape.pos[0], y: shape.pos[1] },
+        // 右上
+        { x: shape.pos[0] + shape.pos[2], y: shape.pos[1] },
+        // 左下
+        { x: shape.pos[0], y: shape.pos[1] + shape.pos[3] },
+        // 右下
+        {
+          x: shape.pos[0] + shape.pos[2],
+          y: shape.pos[1] + shape.pos[3],
+        },
+      ]
+    },
+    // 多边形
+    [doodle.tools.polygon]: (shape) => {
+      let ret = []
+      for (let i = 0; i < shape.pos.length; i += 2) {
+        ret.push({
+          x: shape.pos[i],
+          y: shape.pos[i + 1],
+        })
+      }
+      return ret
+    },
+    // 圆
+    [doodle.tools.circle]: (shape) => {
+      return [
+        {
+          x: shape.pos[0] + shape.pos[2],
+          y: shape.pos[1],
+        },
+      ]
+    },
+    // 椭圆
+    [doodle.tools.ellipse]: (shape) => {
+      return [
+        {
+          x: shape.pos[0],
+          y: shape.pos[1] - shape.pos[3],
+        },
+        {
+          x: shape.pos[0] + shape.pos[2],
+          y: shape.pos[1],
+        },
+      ]
+    },
+    // 直线
+    [doodle.tools.line]: (shape) => {
+      return [
+        { x: shape.pos[0], y: shape.pos[1] },
+        { x: shape.pos[2], y: shape.pos[3] },
+      ]
+    },
+    // 箭头直线
+    [doodle.tools.arrow_line]: (shape) => {
+      return [
+        { x: shape.pos[0], y: shape.pos[1] },
+        { x: shape.pos[2], y: shape.pos[3] },
+      ]
+    },
+  }
+  if (shapeGetAnchorsFuncMap[doodle.tempShape.type]) {
+    return shapeGetAnchorsFuncMap[doodle.tempShape.type](doodle.tempShape)
+  }
+  return []
+}
+// 悬浮的锚点
+export const getHoverAnchor = (doodle) => {
+  if (!doodle.anchors.length) {
+    return null
+  }
+  for (const v of doodle.anchors) {
+    if (
+      lineLength([
+        [v.x, v.y],
+        [doodle.mouse.dx, doodle.mouse.dy],
+      ]) <
+      (doodle.anchorRadius + 2) / doodle.scale
+    ) {
+      return v
+    }
   }
   return null
 }

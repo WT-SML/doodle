@@ -8,7 +8,9 @@ import {
 } from "./mouse-handler"
 import RBush from "rbush"
 import { getBounds } from "./bounds"
-import { getHoverShape } from "./geometry"
+import { generateAnchors, getHoverAnchor, getHoverShape } from "./geometry"
+import _ from "lodash"
+import { onKeyStroke } from "@vueuse/core"
 
 export class Doodle {
   // 工具列表
@@ -34,19 +36,22 @@ export class Doodle {
   mode = this.tools.move // 模式
   viewer // osd的画布
   shapes = [] // 形状数组
-  bounds
+  bounds // 边界
+  anchors = [] // 锚点数组
   scale = 1 // 缩放
   // 平移
   translate = {
     x: 0,
     y: 0,
   }
-  r = 6 // 点半径
   strokeWidth = 2 // 线宽
   color = "#FF0000" // 颜色
   hitRadius = 5 // 光标的碰撞半径
-  tempShape // 临时shape（新增和编辑时）
-  hoverShape // 悬浮的shape
+  anchorRadius = 5 // 锚点半径
+  pointRadius = 6 // 点半径
+  tempShape = null // 临时shape（新增和编辑时）
+  hoverShape = null // 悬浮的shape
+  hoverAnchor = null // 悬浮的锚点
   // 鼠标
   mouse = {
     x: 0,
@@ -61,17 +66,17 @@ export class Doodle {
       ...this.conf,
       ...conf,
     }
-    // 画布
     this.viewer = this.conf.viewer
+    // 初始化 边界
+    this.createBounds()
+    // 监听键盘
+    this.listenKeyboard()
+    // 画布
     ;(async () => {
       // 初始化 pxii
       await this.createPixi()
-      // 初始化 边界
-      this.createBounds()
       // 初始化 鼠标跟踪器
       this.createMouseTracker()
-      // 监听键盘
-      this.listenKeyboard()
       // 开始循环
       this.startLoop()
     })()
@@ -87,9 +92,13 @@ export class Doodle {
       element: this.pixiApp.canvas,
       pressHandler: (e) => {
         handleMouseDown(this)
+        // 计算锚点
+        this.anchors = generateAnchors(this)
       },
       releaseHandler: (e) => {
         handleMouseUp(this)
+        // 计算锚点
+        this.anchors = generateAnchors(this)
       },
       moveHandler: (e) => {
         // @ts-ignore
@@ -102,7 +111,10 @@ export class Doodle {
         this.mouse.dx = dp.x
         this.mouse.dy = dp.y
         handleMouseMove(this)
+        // 悬浮的shape
         this.hoverShape = getHoverShape(this)
+        // 悬浮的
+        this.hoverAnchor = getHoverAnchor(this)
       },
     })
     // 启用鼠标跟踪器
@@ -114,10 +126,25 @@ export class Doodle {
     this.mode = mode
     this.viewer.setMouseNavEnabled(mode === this.tools.move)
   }
-  // 销毁 TODO:
-  deatroy() {}
-  // 监听键盘 TODO:
-  listenKeyboard() {}
+  // 销毁
+  destroy() {
+    this.pixiApp.destroy()
+  }
+  // 监听键盘
+  listenKeyboard() {
+    onKeyStroke(["Delete"], async (e) => {
+      switch (e.code) {
+        case "Delete":
+          // @ts-ignore
+          if (this.tempShape && this.tempShape.id) {
+            this.conf.onRemove(this.tempShape)
+          }
+          break
+        default:
+          break
+      }
+    })
+  }
   // 帧循环
   startLoop() {
     this.pixiApp.ticker.add(() => {
@@ -126,15 +153,17 @@ export class Doodle {
   }
   // 添加图形（批量）
   addShapes(shapes) {
-    this.shapes.push(...shapes)
-    for (const shape of shapes) {
-      this.bounds.insert(getBounds(shape))
+    const _shapes = _.cloneDeep(shapes)
+    this.shapes.push(..._shapes)
+    for (const shape of _shapes) {
+      this.bounds.insert(getBounds(shape, this))
     }
   }
   // 添加图形
   addShape(shape) {
-    this.shapes.push(shape)
-    this.bounds.insert(getBounds(shape))
+    const _shape = _.cloneDeep(shape)
+    this.shapes.push(_shape)
+    this.bounds.insert(getBounds(_shape, this))
   }
   // 删除图形（批量）
   removeShapes(shapes) {
@@ -152,6 +181,16 @@ export class Doodle {
     this.bounds.remove(shape, (a, b) => {
       return a.id === b.id
     })
+  }
+  // 更新图形
+  updateShapes(shapes) {
+    this.removeShapes(shapes)
+    this.addShapes(shapes)
+  }
+  // 更新图形
+  updateShape(shape) {
+    this.removeShape(shape)
+    this.addShape(shape)
   }
   // 创建pixi
   async createPixi() {

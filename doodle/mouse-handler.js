@@ -1,4 +1,5 @@
-import { lineLength } from "geometric"
+import _ from "lodash"
+import { isPolygonToolToStartPointTooClose } from "./geometry"
 
 // 鼠标按下
 export const handleMouseDown = (doodle) => {
@@ -14,92 +15,96 @@ export const handleMouseMove = (doodle) => {
 }
 
 let lastMouseDownTimestamp = 0 // 多边形工具下判断双击完成形状的时间戳
+let tempCurMousePoint = null // 开始编辑前的鼠标位置
+let tempShape = null // 开始编辑前形状的副本
+let tempAnchor = null // 开始编辑前锚点的副本
 
-// 获取鼠标处理器 TODO:
-const getMouseHandler = (doodle) => {
+// 获取鼠标处理器
+export const getMouseHandler = (doodle) => {
   // 工具对应的鼠标处理函数
   const toolsMouseMap = {
     // 移动
     [doodle.tools.move]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
-          return
-        }
         const curMouseDownTimestamp = new Date().getTime()
-        lastMouseDownTimestamp = curMouseDownTimestamp
+        lastMouseDownTimestamp = curMouseDownTimestamp // 多边形工具下判断双击完成形状的时间戳
         // 在锚点上按下
-        if (state.tempShape && hoverAnchor.value) {
-          props.viewer.setMouseNavEnabled(false)
-          tempCurMousePoint = dziCoordByMouse.value
-          tempAnchor = _.cloneDeep(hoverAnchor.value)
-          tempShape = _.cloneDeep(state.tempShape)
+        if (doodle.tempShape && doodle.hoverAnchor) {
+          doodle.viewer.setMouseNavEnabled(false)
+          tempCurMousePoint = {
+            x: doodle.mouse.dx,
+            y: doodle.mouse.dy,
+          }
+          tempAnchor = _.cloneDeep(doodle.hoverAnchor)
+          tempAnchor = _.cloneDeep(doodle.hoverAnchor)
+          tempShape = _.cloneDeep(doodle.tempShape)
           return
         }
         // 在编辑的shape上按下
         if (
-          state.tempShape &&
-          hoverShape.value &&
-          state.tempShape.id === hoverShape.value.id
+          doodle.tempShape &&
+          doodle.hoverShape &&
+          doodle.tempShape.id === doodle.hoverShape.id
         ) {
-          props.viewer.setMouseNavEnabled(false)
-          tempCurMousePoint = dziCoordByMouse.value
+          doodle.viewer.setMouseNavEnabled(false)
+          tempCurMousePoint = {
+            x: doodle.mouse.dx,
+            y: doodle.mouse.dy,
+          }
           tempAnchor = null
-          tempShape = _.cloneDeep(state.tempShape)
+          tempShape = _.cloneDeep(doodle.tempShape)
           return
         }
         tempCurMousePoint = null
         tempShape = null
         tempAnchor = null
-        props.viewer.setMouseNavEnabled(true)
+        doodle.viewer.setMouseNavEnabled(true)
       },
       // 抬起
       handleMouseUp: () => {
-        if (isMouseOutside.value) {
-          return
-        }
         const curMouseDownTimestamp = new Date().getTime()
         const diff = curMouseDownTimestamp - lastMouseDownTimestamp
         if (diff < 150) {
           // 短按
           // 短按了锚点
-          if (hoverAnchor.value) {
+          if (doodle.hoverAnchor) {
             return
           }
           // 短按了形状
-          if (hoverShape.value) {
+          if (doodle.hoverShape) {
             // 当前有编辑中的形状
-            if (state.tempShape) {
-              if (state.tempShape.id !== hoverShape.value.id) {
-                const originalShape = props.shapes.find(
-                  (item) => item.id === state.tempShape.id
+            if (doodle.tempShape) {
+              if (doodle.tempShape.id !== doodle.hoverShape.id) {
+                const originalShape = doodle.shapes.find(
+                  (item) => item.id === doodle.tempShape.id
                 )
                 if (
                   JSON.stringify(originalShape) !==
-                  JSON.stringify(state.tempShape)
+                  JSON.stringify(doodle.tempShape)
                 ) {
-                  emits("update", state.tempShape)
+                  doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape))
                 }
-                state.tempShape = _.cloneDeep(hoverShape.value)
+                doodle.tempShape = _.cloneDeep(doodle.hoverShape)
               }
               // 当前没有编辑中的形状
             } else {
-              state.tempShape = _.cloneDeep(hoverShape.value)
+              doodle.tempShape = _.cloneDeep(doodle.hoverShape)
             }
             return
           }
           // 短按空白区域
-          if (state.tempShape) {
+          if (doodle.tempShape) {
             // 如果有临时shape则触发编辑保存
-            const originalShape = props.shapes.find(
-              (item) => item.id === state.tempShape.id
+            const originalShape = doodle.shapes.find(
+              (item) => item.id === doodle.tempShape.id
             )
             if (
-              JSON.stringify(originalShape) !== JSON.stringify(state.tempShape)
+              JSON.stringify(originalShape) !== JSON.stringify(doodle.tempShape)
             ) {
-              emits("update", state.tempShape)
+              doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape))
             }
-            state.tempShape = null
+            doodle.tempShape = null
           }
         } else {
           // 长按
@@ -108,160 +113,157 @@ const getMouseHandler = (doodle) => {
       // 移动
       handleMouseMove: () => {
         // 在锚点上移动
-        if (state.tempShape && tempAnchor && isLeftMousePressed.value) {
+        if (doodle.tempShape && tempAnchor && doodle.mouse.isPressed) {
           const diff = {
-            x: dziCoordByMouse.value.x - tempCurMousePoint.x,
-            y: dziCoordByMouse.value.y - tempCurMousePoint.y,
+            x: doodle.mouse.dx - tempCurMousePoint.x,
+            y: doodle.mouse.dy - tempCurMousePoint.y,
           }
           const anchorHandleMoveFuncMap = {
             // 矩形
-            [doodle.tools.RECT]: (shape, cloneShape, tempAnchor, diff) => {
+            [doodle.tools.rect]: (shape, cloneShape, tempAnchor, diff) => {
               // 左上
               if (
-                tempAnchor.x === cloneShape.meta.x &&
-                tempAnchor.y === cloneShape.meta.y
+                tempAnchor.x === cloneShape.pos[0] &&
+                tempAnchor.y === cloneShape.pos[1]
               ) {
-                if (diff.x < cloneShape.meta.width) {
-                  shape.meta.x = cloneShape.meta.x + diff.x
-                  shape.meta.width = cloneShape.meta.width - diff.x
+                if (diff.x < cloneShape.pos[2]) {
+                  shape.pos[0] = cloneShape.pos[0] + diff.x
+                  shape.pos[2] = cloneShape.pos[2] - diff.x
                 } else {
-                  shape.meta.x = cloneShape.meta.x + cloneShape.meta.width
-                  shape.meta.width = diff.x - cloneShape.meta.width
+                  shape.pos[0] = cloneShape.pos[0] + cloneShape.pos[2]
+                  shape.pos[2] = diff.x - cloneShape.pos[2]
                 }
-                if (diff.y < cloneShape.meta.height) {
-                  shape.meta.y = cloneShape.meta.y + diff.y
-                  shape.meta.height = cloneShape.meta.height - diff.y
+                if (diff.y < cloneShape.pos[3]) {
+                  shape.pos[1] = cloneShape.pos[1] + diff.y
+                  shape.pos[3] = cloneShape.pos[3] - diff.y
                 } else {
-                  shape.meta.y = cloneShape.meta.y + cloneShape.meta.height
-                  shape.meta.height = diff.y - cloneShape.meta.height
+                  shape.pos[1] = cloneShape.pos[1] + cloneShape.pos[3]
+                  shape.pos[3] = diff.y - cloneShape.pos[3]
                 }
                 return
               }
               // 右上
               if (
-                tempAnchor.x === cloneShape.meta.x + cloneShape.meta.width &&
-                tempAnchor.y === cloneShape.meta.y
+                tempAnchor.x === cloneShape.pos[0] + cloneShape.pos[2] &&
+                tempAnchor.y === cloneShape.pos[1]
               ) {
-                if (diff.x < -cloneShape.meta.width) {
-                  shape.meta.x =
-                    cloneShape.meta.x + cloneShape.meta.width + diff.x
-                  shape.meta.width = -diff.x - cloneShape.meta.width
+                if (diff.x < -cloneShape.pos[2]) {
+                  shape.pos[0] = cloneShape.pos[0] + cloneShape.pos[2] + diff.x
+                  shape.pos[2] = -diff.x - cloneShape.pos[2]
                 } else {
-                  shape.meta.width = cloneShape.meta.width + diff.x
+                  shape.pos[2] = cloneShape.pos[2] + diff.x
                 }
-                if (diff.y > cloneShape.meta.height) {
-                  shape.meta.y = cloneShape.meta.y + cloneShape.meta.height
-                  shape.meta.height = diff.y - cloneShape.meta.height
+                if (diff.y > cloneShape.pos[3]) {
+                  shape.pos[1] = cloneShape.pos[1] + cloneShape.pos[3]
+                  shape.pos[3] = diff.y - cloneShape.pos[3]
                 } else {
-                  shape.meta.y = cloneShape.meta.y + diff.y
-                  shape.meta.height = cloneShape.meta.height - diff.y
+                  shape.pos[1] = cloneShape.pos[1] + diff.y
+                  shape.pos[3] = cloneShape.pos[3] - diff.y
                 }
                 return
               }
               // 左下
               if (
-                tempAnchor.x === cloneShape.meta.x &&
-                tempAnchor.y === cloneShape.meta.y + cloneShape.meta.height
+                tempAnchor.x === cloneShape.pos[0] &&
+                tempAnchor.y === cloneShape.pos[1] + cloneShape.pos[3]
               ) {
-                if (diff.x < cloneShape.meta.width) {
-                  shape.meta.x = cloneShape.meta.x + diff.x
-                  shape.meta.width = cloneShape.meta.width - diff.x
+                if (diff.x < cloneShape.pos[2]) {
+                  shape.pos[0] = cloneShape.pos[0] + diff.x
+                  shape.pos[2] = cloneShape.pos[2] - diff.x
                 } else {
-                  shape.meta.x = cloneShape.meta.x + cloneShape.meta.width
-                  shape.meta.width = diff.x - cloneShape.meta.width
+                  shape.pos[0] = cloneShape.pos[0] + cloneShape.pos[2]
+                  shape.pos[2] = diff.x - cloneShape.pos[2]
                 }
-                if (-diff.y > cloneShape.meta.height) {
-                  shape.meta.y =
-                    cloneShape.meta.y + cloneShape.meta.height + diff.y
-                  shape.meta.height = -diff.y - cloneShape.meta.height
+                if (-diff.y > cloneShape.pos[3]) {
+                  shape.pos[1] = cloneShape.pos[1] + cloneShape.pos[3] + diff.y
+                  shape.pos[3] = -diff.y - cloneShape.pos[3]
                 } else {
-                  shape.meta.height = cloneShape.meta.height + diff.y
+                  shape.pos[3] = cloneShape.pos[3] + diff.y
                 }
               }
               // 右下
               if (
-                tempAnchor.x === cloneShape.meta.x + cloneShape.meta.width &&
-                tempAnchor.y === cloneShape.meta.y + cloneShape.meta.height
+                tempAnchor.x === cloneShape.pos[0] + cloneShape.pos[2] &&
+                tempAnchor.y === cloneShape.pos[1] + cloneShape.pos[3]
               ) {
-                if (diff.x < -cloneShape.meta.width) {
-                  shape.meta.x =
-                    cloneShape.meta.x + cloneShape.meta.width + diff.x
-                  shape.meta.width = -diff.x - cloneShape.meta.width
+                if (diff.x < -cloneShape.pos[2]) {
+                  shape.pos[0] = cloneShape.pos[0] + cloneShape.pos[2] + diff.x
+                  shape.pos[2] = -diff.x - cloneShape.pos[2]
                 } else {
-                  shape.meta.width = cloneShape.meta.width + diff.x
+                  shape.pos[2] = cloneShape.pos[2] + diff.x
                 }
-                if (-diff.y > cloneShape.meta.height) {
-                  shape.meta.y =
-                    cloneShape.meta.y + cloneShape.meta.height + diff.y
-                  shape.meta.height = -diff.y - cloneShape.meta.height
+                if (-diff.y > cloneShape.pos[3]) {
+                  shape.pos[1] = cloneShape.pos[1] + cloneShape.pos[3] + diff.y
+                  shape.pos[3] = -diff.y - cloneShape.pos[3]
                 } else {
-                  shape.meta.height = cloneShape.meta.height + diff.y
+                  shape.pos[3] = cloneShape.pos[3] + diff.y
                 }
                 return
               }
             },
             // 多边形
-            [doodle.tools.POLYGON]: (shape, cloneShape, tempAnchor, diff) => {
+            [doodle.tools.polygon]: (shape, cloneShape, tempAnchor, diff) => {
               let i = 0
-              for (const _i in cloneShape.meta.points) {
-                const item = cloneShape.meta.points[_i]
-                if (item.x === tempAnchor.x && item.y === tempAnchor.y) {
+              for (const _i in cloneShape.pos) {
+                const item = cloneShape.pos[_i]
+                const next = cloneShape.pos[_i + 1]
+                if (item === tempAnchor.x && next === tempAnchor.y) {
                   i = Number(_i)
+                  break
                 }
               }
-              shape.meta.points[i].x = tempAnchor.x + diff.x
-              shape.meta.points[i].y = tempAnchor.y + diff.y
+              shape.pos[i] = tempAnchor.x + diff.x
+              shape.pos[i + 1] = tempAnchor.y + diff.y
             },
             // 圆
-            [doodle.tools.CIRCLE]: (shape, cloneShape, tempAnchor, diff) => {
-              const ret = Math.max(cloneShape.meta.rx + diff.x, 1)
-              shape.meta.rx = ret
-              shape.meta.ry = ret
+            [doodle.tools.circle]: (shape, cloneShape, tempAnchor, diff) => {
+              const ret = Math.max(cloneShape.pos[2] + diff.x, 1)
+              shape.pos[2] = ret
             },
             // 椭圆
-            [doodle.tools.ELLIPSE]: (shape, cloneShape, tempAnchor, diff) => {
+            [doodle.tools.ellipse]: (shape, cloneShape, tempAnchor, diff) => {
               // 上边的点
               if (
-                tempAnchor.x === cloneShape.meta.cx &&
-                tempAnchor.y === cloneShape.meta.cy - cloneShape.meta.ry
+                tempAnchor.x === cloneShape.pos[0] &&
+                tempAnchor.y === cloneShape.pos[1] - cloneShape.pos[3]
               ) {
-                const ret = Math.max(cloneShape.meta.ry - diff.y, 1)
-                shape.meta.ry = ret
+                const ret = Math.max(cloneShape.pos[3] - diff.y, 1)
+                shape.pos[3] = ret
                 return
               }
               // 右边的点
               if (
-                tempAnchor.x === cloneShape.meta.cx + cloneShape.meta.rx &&
-                tempAnchor.y === cloneShape.meta.cy
+                tempAnchor.x === cloneShape.pos[0] + cloneShape.pos[2] &&
+                tempAnchor.y === cloneShape.pos[1]
               ) {
-                const ret = Math.max(cloneShape.meta.rx + diff.x, 1)
-                shape.meta.rx = ret
+                const ret = Math.max(cloneShape.pos[2] + diff.x, 1)
+                shape.pos[2] = ret
                 return
               }
             },
             // 直线
-            [doodle.tools.LINE]: (shape, cloneShape, tempAnchor, diff) => {
+            [doodle.tools.line]: (shape, cloneShape, tempAnchor, diff) => {
               // 起始点
               if (
-                tempAnchor.x === cloneShape.meta.x1 &&
-                tempAnchor.y === cloneShape.meta.y1
+                tempAnchor.x === cloneShape.pos[0] &&
+                tempAnchor.y === cloneShape.pos[1]
               ) {
-                shape.meta.x1 = cloneShape.meta.x1 + diff.x
-                shape.meta.y1 = cloneShape.meta.y1 + diff.y
+                shape.pos[0] = cloneShape.pos[0] + diff.x
+                shape.pos[1] = cloneShape.pos[1] + diff.y
                 return
               }
               // 结束点
               if (
-                tempAnchor.x === cloneShape.meta.x2 &&
-                tempAnchor.y === cloneShape.meta.y2
+                tempAnchor.x === cloneShape.pos[2] &&
+                tempAnchor.y === cloneShape.pos[3]
               ) {
-                shape.meta.x2 = cloneShape.meta.x2 + diff.x
-                shape.meta.y2 = cloneShape.meta.y2 + diff.y
+                shape.pos[2] = cloneShape.pos[2] + diff.x
+                shape.pos[3] = cloneShape.pos[3] + diff.y
                 return
               }
             },
             // 箭头直线
-            [doodle.tools.ARROW_LINE]: (
+            [doodle.tools.arrow_line]: (
               shape,
               cloneShape,
               tempAnchor,
@@ -269,26 +271,26 @@ const getMouseHandler = (doodle) => {
             ) => {
               // 起始点
               if (
-                tempAnchor.x === cloneShape.meta.x1 &&
-                tempAnchor.y === cloneShape.meta.y1
+                tempAnchor.x === cloneShape.pos[0] &&
+                tempAnchor.y === cloneShape.pos[1]
               ) {
-                shape.meta.x1 = cloneShape.meta.x1 + diff.x
-                shape.meta.y1 = cloneShape.meta.y1 + diff.y
+                shape.pos[0] = cloneShape.pos[0] + diff.x
+                shape.pos[1] = cloneShape.pos[1] + diff.y
                 return
               }
               // 结束点
               if (
-                tempAnchor.x === cloneShape.meta.x2 &&
-                tempAnchor.y === cloneShape.meta.y2
+                tempAnchor.x === cloneShape.pos[2] &&
+                tempAnchor.y === cloneShape.pos[3]
               ) {
-                shape.meta.x2 = cloneShape.meta.x2 + diff.x
-                shape.meta.y2 = cloneShape.meta.y2 + diff.y
+                shape.pos[2] = cloneShape.pos[2] + diff.x
+                shape.pos[3] = cloneShape.pos[3] + diff.y
                 return
               }
             },
           }
-          anchorHandleMoveFuncMap[state.tempShape.type](
-            state.tempShape,
+          anchorHandleMoveFuncMap[doodle.tempShape.type](
+            doodle.tempShape,
             tempShape,
             tempAnchor,
             diff
@@ -296,70 +298,79 @@ const getMouseHandler = (doodle) => {
           return
         }
         // 在编辑的shape上移动
-        if (state.tempShape && tempShape && isLeftMousePressed.value) {
+        if (doodle.tempShape && tempShape && doodle.mouse.isPressed) {
           const diff = {
-            x: dziCoordByMouse.value.x - tempCurMousePoint.x,
-            y: dziCoordByMouse.value.y - tempCurMousePoint.y,
+            x: doodle.mouse.dx - tempCurMousePoint.x,
+            y: doodle.mouse.dy - tempCurMousePoint.y,
           }
           const shapeHandleMoveFuncMap = {
             // 矩形
-            [doodle.tools.RECT]: (shape, cloneShape, diff) => {
-              shape.meta.x = cloneShape.meta.x + diff.x
-              shape.meta.y = cloneShape.meta.y + diff.y
+            [doodle.tools.rect]: (shape, cloneShape, diff) => {
+              shape.pos[0] = cloneShape.pos[0] + diff.x
+              shape.pos[1] = cloneShape.pos[1] + diff.y
             },
             // 多边形
-            [doodle.tools.POLYGON]: (shape, cloneShape, diff) => {
-              shape.meta.points = cloneShape.meta.points.map((item) => ({
-                x: item.x + diff.x,
-                y: item.y + diff.y,
-              }))
+            [doodle.tools.polygon]: (shape, cloneShape, diff) => {
+              shape.pos = cloneShape.pos.map((item, i) => {
+                if (i % 2 === 0) {
+                  return item + diff.x
+                } else {
+                  return item + diff.y
+                }
+              })
             },
             // 圆
-            [doodle.tools.CIRCLE]: (shape, cloneShape, diff) => {
-              shape.meta.cx = cloneShape.meta.cx + diff.x
-              shape.meta.cy = cloneShape.meta.cy + diff.y
+            [doodle.tools.circle]: (shape, cloneShape, diff) => {
+              shape.pos[0] = cloneShape.pos[0] + diff.x
+              shape.pos[1] = cloneShape.pos[1] + diff.y
             },
             // 椭圆
-            [doodle.tools.ELLIPSE]: (shape, cloneShape, diff) => {
-              shape.meta.cx = cloneShape.meta.cx + diff.x
-              shape.meta.cy = cloneShape.meta.cy + diff.y
+            [doodle.tools.ellipse]: (shape, cloneShape, diff) => {
+              shape.pos[0] = cloneShape.pos[0] + diff.x
+              shape.pos[1] = cloneShape.pos[1] + diff.y
             },
             // 路径
-            [doodle.tools.PATH]: (shape, cloneShape, diff) => {
-              shape.meta.d = cloneShape.meta.d.map((item) => ({
-                x: item.x + diff.x,
-                y: item.y + diff.y,
-              }))
+            [doodle.tools.path]: (shape, cloneShape, diff) => {
+              shape.pos = cloneShape.pos.map((item, i) => {
+                if (i % 2 === 0) {
+                  return item + diff.x
+                } else {
+                  return item + diff.y
+                }
+              })
             },
             // 闭合路径
-            [doodle.tools.CLOSED_PATH]: (shape, cloneShape, diff) => {
-              shape.meta.d = cloneShape.meta.d.map((item) => ({
-                x: item.x + diff.x,
-                y: item.y + diff.y,
-              }))
+            [doodle.tools.closed_path]: (shape, cloneShape, diff) => {
+              shape.pos = cloneShape.pos.map((item, i) => {
+                if (i % 2 === 0) {
+                  return item + diff.x
+                } else {
+                  return item + diff.y
+                }
+              })
             },
             // 直线
-            [doodle.tools.LINE]: (shape, cloneShape, diff) => {
-              shape.meta.x1 = cloneShape.meta.x1 + diff.x
-              shape.meta.x2 = cloneShape.meta.x2 + diff.x
-              shape.meta.y1 = cloneShape.meta.y1 + diff.y
-              shape.meta.y2 = cloneShape.meta.y2 + diff.y
+            [doodle.tools.line]: (shape, cloneShape, diff) => {
+              shape.pos[0] = cloneShape.pos[0] + diff.x
+              shape.pos[1] = cloneShape.pos[1] + diff.y
+              shape.pos[2] = cloneShape.pos[2] + diff.x
+              shape.pos[3] = cloneShape.pos[3] + diff.y
             },
             // 箭头直线
-            [doodle.tools.ARROW_LINE]: (shape, cloneShape, diff) => {
-              shape.meta.x1 = cloneShape.meta.x1 + diff.x
-              shape.meta.x2 = cloneShape.meta.x2 + diff.x
-              shape.meta.y1 = cloneShape.meta.y1 + diff.y
-              shape.meta.y2 = cloneShape.meta.y2 + diff.y
+            [doodle.tools.arrow_line]: (shape, cloneShape, diff) => {
+              shape.pos[0] = cloneShape.pos[0] + diff.x
+              shape.pos[1] = cloneShape.pos[1] + diff.y
+              shape.pos[2] = cloneShape.pos[2] + diff.x
+              shape.pos[3] = cloneShape.pos[3] + diff.y
             },
             // 点
-            [doodle.tools.POINT]: (shape, cloneShape, diff) => {
-              shape.meta.cx = cloneShape.meta.cx + diff.x
-              shape.meta.cy = cloneShape.meta.cy + diff.y
+            [doodle.tools.point]: (shape, cloneShape, diff) => {
+              shape.pos[0] = cloneShape.pos[0] + diff.x
+              shape.pos[1] = cloneShape.pos[1] + diff.y
             },
           }
-          shapeHandleMoveFuncMap[state.tempShape.type](
-            state.tempShape,
+          shapeHandleMoveFuncMap[doodle.tempShape.type](
+            doodle.tempShape,
             tempShape,
             diff
           )
@@ -371,67 +382,62 @@ const getMouseHandler = (doodle) => {
     [doodle.tools.rect]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.RECT,
-          meta: {
-            x: dziCoordByMouse.value.x,
-            y: dziCoordByMouse.value.y,
-            width: 0,
-            height: 0,
-          },
+          type: doodle.tools.rect,
+          pos: [doodle.mouse.dx, doodle.mouse.dy, 0, 0],
           // 临时变量
           temp: {
             start: {
-              x: dziCoordByMouse.value.x,
-              y: dziCoordByMouse.value.y,
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
             },
             end: {
-              x: dziCoordByMouse.value.x,
-              y: dziCoordByMouse.value.y,
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
             },
           },
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        if (!state.tempShape.meta.width || !state.tempShape.meta.height) {
-          state.tempShape = null
+        if (!doodle.tempShape.pos[2] || !doodle.tempShape.pos[3]) {
+          doodle.tempShape = null
           return
         }
-        delete state.tempShape.temp
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        delete doodle.tempShape.temp
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.temp.end = dziCoordByMouse.value
-        state.tempShape.meta.x = Math.min(
-          state.tempShape.temp.end.x,
-          state.tempShape.temp.start.x
+        doodle.tempShape.temp.end = {
+          x: doodle.mouse.dx,
+          y: doodle.mouse.dy,
+        }
+        doodle.tempShape.pos[0] = Math.min(
+          doodle.tempShape.temp.end.x,
+          doodle.tempShape.temp.start.x
         )
-        state.tempShape.meta.y = Math.min(
-          state.tempShape.temp.end.y,
-          state.tempShape.temp.start.y
+        doodle.tempShape.pos[1] = Math.min(
+          doodle.tempShape.temp.end.y,
+          doodle.tempShape.temp.start.y
         )
-        state.tempShape.meta.width = Math.abs(
-          state.tempShape.temp.end.x - state.tempShape.temp.start.x
+        doodle.tempShape.pos[2] = Math.abs(
+          doodle.tempShape.temp.end.x - doodle.tempShape.temp.start.x
         )
-        state.tempShape.meta.height = Math.abs(
-          state.tempShape.temp.end.y - state.tempShape.temp.start.y
+        doodle.tempShape.pos[3] = Math.abs(
+          doodle.tempShape.temp.end.y - doodle.tempShape.temp.start.y
         )
       },
     },
@@ -439,62 +445,51 @@ const getMouseHandler = (doodle) => {
     [doodle.tools.polygon]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
-          return
-        }
         const curMouseDownTimestamp = new Date().getTime()
         const diff = curMouseDownTimestamp - lastMouseDownTimestamp
         lastMouseDownTimestamp = curMouseDownTimestamp
-        const clickPoint = isPolygonToolToStartPointTooClose.value
-          ? state.tempShape.meta.points[0]
-          : dziCoordByMouse.value
+        const clickPoint = isPolygonToolToStartPointTooClose(doodle)
+          ? {
+              x: doodle.tempShape.pos[0],
+              y: doodle.tempShape.pos[1],
+            }
+          : {
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
+            }
         const x = clickPoint.x
         const y = clickPoint.y
         const initPolygonShape = () => {
-          state.tempShape = {
+          doodle.tempShape = {
             id: null,
-            type: doodle.tools.POLYGON,
-            meta: {
-              points: [
-                {
-                  x,
-                  y,
-                },
-                {
-                  x,
-                  y,
-                },
-              ],
-            },
+            type: doodle.tools.polygon,
+            pos: [x, y, x, y],
           }
         }
         const completeShape = () => {
-          state.tempShape.meta.points.pop()
-          state.tempShape.id = new Date().getTime()
-          emits("add", state.tempShape)
-          state.tempShape = null
+          doodle.tempShape.pos.pop()
+          doodle.tempShape.pos.pop()
+          doodle.tempShape.id = new Date().getTime()
+          doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+          doodle.tempShape = null
         }
         const addPoint = () => {
-          for (const v of state.tempShape.meta.points.slice(
-            0,
-            state.tempShape.meta.points.length - 1
-          )) {
-            if (x === v.x && y === v.y) {
-              return
-            }
+          if (
+            x === doodle.tempShape.pos.at(-2) &&
+            y === doodle.tempShape.pos.at(-1)
+          ) {
+            return
           }
-          state.tempShape.meta.points.push({
-            x,
-            y,
-          })
+          doodle.tempShape.pos.push(x)
+          doodle.tempShape.pos.push(y)
         }
-        if (state.tempShape === null) {
+        if (doodle.tempShape === null) {
           initPolygonShape()
         } else {
           // 如果离初始点靠的太近 直接完成
           if (
-            state.tempShape.meta.points.length > 3 &&
-            isPolygonToolToStartPointTooClose.value
+            doodle.tempShape.pos.length > 6 &&
+            isPolygonToolToStartPointTooClose(doodle)
           ) {
             completeShape()
           } else {
@@ -503,10 +498,10 @@ const getMouseHandler = (doodle) => {
         }
         if (diff < 300) {
           lastMouseDownTimestamp = 0
-          if (state.tempShape === null) {
+          if (doodle.tempShape === null) {
             return
           }
-          if (state.tempShape.meta.points.length > 3) {
+          if (doodle.tempShape.pos.length > 6) {
             completeShape()
           }
         }
@@ -515,338 +510,311 @@ const getMouseHandler = (doodle) => {
       handleMouseUp: () => {},
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        if (isPolygonToolToStartPointTooClose.value) {
-          state.tempShape.meta.points[state.tempShape.meta.points.length - 1] =
-            state.tempShape.meta.points[0]
+        if (isPolygonToolToStartPointTooClose(doodle)) {
+          doodle.tempShape.pos[doodle.tempShape.pos.length - 1] =
+            doodle.tempShape.pos[1]
+          doodle.tempShape.pos[doodle.tempShape.pos.length - 2] =
+            doodle.tempShape.pos[0]
           return
         }
-        state.tempShape.meta.points[state.tempShape.meta.points.length - 1] =
-          dziCoordByMouse.value
+        doodle.tempShape.pos[doodle.tempShape.pos.length - 1] = doodle.mouse.dy
+        doodle.tempShape.pos[doodle.tempShape.pos.length - 2] = doodle.mouse.dx
       },
     },
     // 圆
     [doodle.tools.circle]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.CIRCLE,
-          meta: {
-            cx: dziCoordByMouse.value.x,
-            cy: dziCoordByMouse.value.y,
-            rx: 0,
-            ry: 0,
-          },
+          type: doodle.tools.circle,
+          pos: [doodle.mouse.dx, doodle.mouse.dy, 0],
           // 临时变量
           temp: {
             start: {
-              x: dziCoordByMouse.value.x,
-              y: dziCoordByMouse.value.y,
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
             },
             end: {
-              x: dziCoordByMouse.value.x,
-              y: dziCoordByMouse.value.y,
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
             },
           },
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        if (!state.tempShape.meta.rx || !state.tempShape.meta.ry) {
-          state.tempShape = null
+        if (!doodle.tempShape.pos[2]) {
+          doodle.tempShape = null
           return
         }
-        delete state.tempShape.temp
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        delete doodle.tempShape.temp
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.temp.end = dziCoordByMouse.value
+        doodle.tempShape.temp.end = {
+          x: doodle.mouse.dx,
+          y: doodle.mouse.dy,
+        }
         const diffX = Math.abs(
-          state.tempShape.temp.end.x - state.tempShape.temp.start.x
+          doodle.tempShape.temp.end.x - doodle.tempShape.temp.start.x
         )
         const diffY = Math.abs(
-          state.tempShape.temp.end.y - state.tempShape.temp.start.y
+          doodle.tempShape.temp.end.y - doodle.tempShape.temp.start.y
         )
         const maxDiff = Math.max(diffX, diffY)
         const r = maxDiff / 2
         const circleCenterPoint = {
-          x: (state.tempShape.temp.end.x + state.tempShape.temp.start.x) / 2,
-          y: (state.tempShape.temp.end.y + state.tempShape.temp.start.y) / 2,
+          x: (doodle.tempShape.temp.end.x + doodle.tempShape.temp.start.x) / 2,
+          y: (doodle.tempShape.temp.end.y + doodle.tempShape.temp.start.y) / 2,
         }
-        state.tempShape.meta.cx = circleCenterPoint.x
-        state.tempShape.meta.cy = circleCenterPoint.y
-        state.tempShape.meta.rx = r
-        state.tempShape.meta.ry = r
+        doodle.tempShape.pos[0] = circleCenterPoint.x
+        doodle.tempShape.pos[1] = circleCenterPoint.y
+        doodle.tempShape.pos[2] = r
       },
     },
     // 椭圆
     [doodle.tools.ellipse]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.ELLIPSE,
-          meta: {
-            cx: dziCoordByMouse.value.x,
-            cy: dziCoordByMouse.value.y,
-            rx: 0,
-            ry: 0,
-          },
+          type: doodle.tools.ellipse,
+          pos: [doodle.mouse.dx, doodle.mouse.dy, 0, 0],
           // 临时变量
           temp: {
             start: {
-              x: dziCoordByMouse.value.x,
-              y: dziCoordByMouse.value.y,
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
             },
             end: {
-              x: dziCoordByMouse.value.x,
-              y: dziCoordByMouse.value.y,
+              x: doodle.mouse.dx,
+              y: doodle.mouse.dy,
             },
           },
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        if (!state.tempShape.meta.rx || !state.tempShape.meta.ry) {
-          state.tempShape = null
+        if (!doodle.tempShape.pos[2] || !doodle.tempShape.pos[3]) {
+          doodle.tempShape = null
           return
         }
-        delete state.tempShape.temp
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        delete doodle.tempShape.temp
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.temp.end = dziCoordByMouse.value
-        const circleCenterPoint = {
-          x: (state.tempShape.temp.end.x + state.tempShape.temp.start.x) / 2,
-          y: (state.tempShape.temp.end.y + state.tempShape.temp.start.y) / 2,
+        doodle.tempShape.temp.end = {
+          x: doodle.mouse.dx,
+          y: doodle.mouse.dy,
         }
-        state.tempShape.meta.cx = circleCenterPoint.x
-        state.tempShape.meta.cy = circleCenterPoint.y
-        state.tempShape.meta.rx =
-          Math.abs(state.tempShape.temp.end.x - state.tempShape.temp.start.x) /
-          2
-        state.tempShape.meta.ry =
-          Math.abs(state.tempShape.temp.end.y - state.tempShape.temp.start.y) /
-          2
+        const circleCenterPoint = {
+          x: (doodle.tempShape.temp.end.x + doodle.tempShape.temp.start.x) / 2,
+          y: (doodle.tempShape.temp.end.y + doodle.tempShape.temp.start.y) / 2,
+        }
+        doodle.tempShape.pos[0] = circleCenterPoint.x
+        doodle.tempShape.pos[1] = circleCenterPoint.y
+        doodle.tempShape.pos[2] =
+          Math.abs(
+            doodle.tempShape.temp.end.x - doodle.tempShape.temp.start.x
+          ) / 2
+        doodle.tempShape.pos[3] =
+          Math.abs(
+            doodle.tempShape.temp.end.y - doodle.tempShape.temp.start.y
+          ) / 2
       },
     },
     // 路径
     [doodle.tools.path]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.PATH,
-          meta: {
-            d: [dziCoordByMouse.value],
-          },
+          type: doodle.tools.path,
+          pos: [doodle.mouse.dx, doodle.mouse.dy],
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        if (state.tempShape.meta.d.length < 2) {
-          state.tempShape = null
+        if (doodle.tempShape.pos.length < 4) {
+          doodle.tempShape = null
           return
         }
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.meta.d.push(dziCoordByMouse.value)
+        doodle.tempShape.pos.push(doodle.mouse.dx)
+        doodle.tempShape.pos.push(doodle.mouse.dy)
       },
     },
     // 闭合路径
     [doodle.tools.closed_path]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.CLOSED_PATH,
-          meta: {
-            d: [dziCoordByMouse.value],
-          },
+          type: doodle.tools.closed_path,
+          pos: [doodle.mouse.dx, doodle.mouse.dy],
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        if (state.tempShape.meta.d.length < 2) {
-          state.tempShape = null
+        if (doodle.tempShape.pos.length < 4) {
+          doodle.tempShape = null
           return
         }
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.meta.d.push(dziCoordByMouse.value)
+        doodle.tempShape.pos.push(doodle.mouse.dx)
+        doodle.tempShape.pos.push(doodle.mouse.dy)
       },
     },
     // 直线
     [doodle.tools.line]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.LINE,
-          meta: {
-            x1: dziCoordByMouse.value.x,
-            y1: dziCoordByMouse.value.y,
-            x2: dziCoordByMouse.value.x,
-            y2: dziCoordByMouse.value.y,
-          },
+          type: doodle.tools.line,
+          pos: [
+            doodle.mouse.dx,
+            doodle.mouse.dy,
+            doodle.mouse.dx,
+            doodle.mouse.dy,
+          ],
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
         if (
-          state.tempShape.meta.x1 === state.tempShape.meta.x2 &&
-          state.tempShape.meta.y1 === state.tempShape.meta.y2
+          doodle.tempShape.pos[0] === doodle.tempShape.pos[2] &&
+          doodle.tempShape.pos[1] === doodle.tempShape.pos[3]
         ) {
-          state.tempShape = null
+          doodle.tempShape = null
           return
         }
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.meta.x2 = dziCoordByMouse.value.x
-        state.tempShape.meta.y2 = dziCoordByMouse.value.y
+        doodle.tempShape.pos[2] = doodle.mouse.dx
+        doodle.tempShape.pos[3] = doodle.mouse.dy
       },
     },
     // 箭头直线
     [doodle.tools.arrow_line]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
+        if (doodle.tempShape !== null) {
           return
         }
-        if (state.tempShape !== null) {
-          return
-        }
-        state.tempShape = {
+        doodle.tempShape = {
           id: null,
-          type: doodle.tools.ARROW_LINE,
-          meta: {
-            x1: dziCoordByMouse.value.x,
-            y1: dziCoordByMouse.value.y,
-            x2: dziCoordByMouse.value.x,
-            y2: dziCoordByMouse.value.y,
-          },
+          type: doodle.tools.arrow_line,
+          pos: [
+            doodle.mouse.dx,
+            doodle.mouse.dy,
+            doodle.mouse.dx,
+            doodle.mouse.dy,
+          ],
         }
       },
       // 抬起
       handleMouseUp: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
         if (
-          state.tempShape.meta.x1 === state.tempShape.meta.x2 &&
-          state.tempShape.meta.y1 === state.tempShape.meta.y2
+          doodle.tempShape.pos[0] === doodle.tempShape.pos[2] &&
+          doodle.tempShape.pos[1] === doodle.tempShape.pos[3]
         ) {
-          state.tempShape = null
+          doodle.tempShape = null
           return
         }
-        state.tempShape.id = new Date().getTime()
-        emits("add", state.tempShape)
-        state.tempShape = null
+        doodle.tempShape.id = new Date().getTime()
+        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
+        doodle.tempShape = null
       },
       // 移动
       handleMouseMove: () => {
-        if (!state.tempShape) {
+        if (!doodle.tempShape) {
           return
         }
-        state.tempShape.meta.x2 = dziCoordByMouse.value.x
-        state.tempShape.meta.y2 = dziCoordByMouse.value.y
+        doodle.tempShape.pos[2] = doodle.mouse.dx
+        doodle.tempShape.pos[3] = doodle.mouse.dy
       },
     },
     // 点
     [doodle.tools.point]: {
       // 按下
       handleMouseDown: () => {
-        if (isMouseOutside.value) {
-          return
-        }
-        emits("add", {
+        doodle.conf.onAdd({
           id: new Date().getTime(),
-          type: doodle.tools.POINT,
-          meta: {
-            cx: dziCoordByMouse.value.x,
-            cy: dziCoordByMouse.value.y,
-          },
+          type: doodle.tools.point,
+          pos: [doodle.mouse.dx, doodle.mouse.dy],
         })
       },
       // 抬起

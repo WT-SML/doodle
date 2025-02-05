@@ -2,7 +2,7 @@
 import { onMounted, ref, reactive } from "vue"
 import { createDoodle } from "../doodle/main.js"
 import { defaultShapes } from "~/tools/default-shapes"
-import { defaultOsdConf } from "./tools/default-osd-conf"
+import { defaultOsdConf } from "~/tools/default-osd-conf"
 import osd from "openseadragon"
 import _ from "lodash"
 import { useFps } from "@vueuse/core"
@@ -32,16 +32,27 @@ const initDoodle = () => {
   const doodle = createDoodle({
     viewer: state.viewer,
     onAdd: (shape) => {
-      console.log(shape)
+      state.doodle.addShape(shape)
     },
     onRemove: (shape) => {
-      console.log(shape)
+      state.doodle.removeShape(shape)
     },
     onUpdate: (shape) => {
-      console.log(shape)
+      state.doodle.updateShape(shape)
     },
   })
   state.doodle = doodle
+}
+// 销毁
+const destroy = () => {
+  state.doodle.destroy()
+}
+// 重新创建
+const init = () => {
+  // 初始化标注插件
+  initDoodle()
+  // 渲染默认的 shapes
+  state.doodle.addShapes(_.cloneDeep(defaultShapes))
 }
 
 onMounted(() => {
@@ -59,7 +70,7 @@ onMounted(() => {
   <div class="w-100vw h-100vh overflow-hidden flex flex-col">
     <!-- 顶部导航 -->
     <div
-      class="h-40px flex-shrink-0 flex items-center px-5 border border-solid border-l-0 border-r-0 border-t-0"
+      class="h-40px flex-shrink-0 flex items-center px-5 border border-[#ccc] border-solid border-l-0 border-r-0 border-t-0"
     >
       <img src="/vite.svg" class="mr-3" width="25" />
       <span class="text-20px">Doodle</span>
@@ -67,7 +78,7 @@ onMounted(() => {
     <div class="flex-grow flex">
       <!-- 侧边导航 -->
       <div
-        class="w-200px flex-shrink-0 border border-solid border-l-0 border-t-0 border-b-0 p-3"
+        class="w-200px flex-shrink-0 border border-[#ccc] border-solid border-l-0 border-t-0 border-b-0 p-3"
       >
         <button
           v-for="(v, k) in state.doodle?.tools"
@@ -76,6 +87,8 @@ onMounted(() => {
         >
           {{ v }}
         </button>
+        <button @click="init()">重新创建</button>
+        <button @click="destroy()">销毁</button>
       </div>
       <!-- 画布 -->
       <div class="flex-grow bg-[#eee]">
@@ -84,9 +97,9 @@ onMounted(() => {
     </div>
     <!-- 底部信息 -->
     <div
-      class="flex-shrink-0 h-25px border border-solid border-l-0 border-b-0 border-b-0 flex items-center px-3 text-12px"
+      class="flex-shrink-0 h-25px border border-[#ccc] border-solid border-l-0 border-b-0 border-b-0 flex items-center px-3 text-12px"
     >
-      FPS：{{ fps }}
+      <span> FPS：{{ fps }}</span>
     </div>
   </div>
 </template>
