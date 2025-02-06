@@ -31,12 +31,11 @@ export const getMouseHandler = (doodle) => {
         lastMouseDownTimestamp = curMouseDownTimestamp // 多边形工具下判断双击完成形状的时间戳
         // 在锚点上按下
         if (doodle.tempShape && doodle.hoverAnchor) {
-          doodle.viewer.setMouseNavEnabled(false)
+          doodle.setPan(false)
           tempCurMousePoint = {
             x: doodle.mouse.dx,
             y: doodle.mouse.dy,
           }
-          tempAnchor = _.cloneDeep(doodle.hoverAnchor)
           tempAnchor = _.cloneDeep(doodle.hoverAnchor)
           tempShape = _.cloneDeep(doodle.tempShape)
           return
@@ -47,7 +46,7 @@ export const getMouseHandler = (doodle) => {
           doodle.hoverShape &&
           doodle.tempShape.id === doodle.hoverShape.id
         ) {
-          doodle.viewer.setMouseNavEnabled(false)
+          doodle.setPan(false)
           tempCurMousePoint = {
             x: doodle.mouse.dx,
             y: doodle.mouse.dy,
@@ -59,7 +58,7 @@ export const getMouseHandler = (doodle) => {
         tempCurMousePoint = null
         tempShape = null
         tempAnchor = null
-        doodle.viewer.setMouseNavEnabled(true)
+        doodle.setPan(true)
       },
       // 抬起
       handleMouseUp: () => {
@@ -203,17 +202,22 @@ export const getMouseHandler = (doodle) => {
             },
             // 多边形
             [doodle.tools.polygon]: (shape, cloneShape, tempAnchor, diff) => {
-              let i = 0
+              let targetIndex = 0
               for (const _i in cloneShape.pos) {
-                const item = cloneShape.pos[_i]
-                const next = cloneShape.pos[_i + 1]
-                if (item === tempAnchor.x && next === tempAnchor.y) {
-                  i = Number(_i)
+                let i = Number(_i)
+                const item = cloneShape.pos[i]
+                const next = cloneShape.pos[i + 1]
+                if (
+                  i % 2 === 0 &&
+                  item === tempAnchor.x &&
+                  next === tempAnchor.y
+                ) {
+                  targetIndex = Number(i)
                   break
                 }
               }
-              shape.pos[i] = tempAnchor.x + diff.x
-              shape.pos[i + 1] = tempAnchor.y + diff.y
+              shape.pos[targetIndex] = tempAnchor.x + diff.x
+              shape.pos[targetIndex + 1] = tempAnchor.y + diff.y
             },
             // 圆
             [doodle.tools.circle]: (shape, cloneShape, tempAnchor, diff) => {
@@ -400,6 +404,7 @@ export const getMouseHandler = (doodle) => {
               y: doodle.mouse.dy,
             },
           },
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -464,6 +469,7 @@ export const getMouseHandler = (doodle) => {
             id: null,
             type: doodle.tools.polygon,
             pos: [x, y, x, y],
+            color: doodle.brushColor,
           }
         }
         const completeShape = () => {
@@ -474,11 +480,15 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
         }
         const addPoint = () => {
-          if (
-            x === doodle.tempShape.pos.at(-2) &&
-            y === doodle.tempShape.pos.at(-1)
-          ) {
-            return
+          for (let _i in doodle.tempShape.pos.slice(0, -2)) {
+            let i = Number(_i)
+            if (
+              i % 2 === 0 &&
+              doodle.tempShape.pos[i] === x &&
+              doodle.tempShape.pos[i + 1] === y
+            ) {
+              return
+            }
           }
           doodle.tempShape.pos.push(x)
           doodle.tempShape.pos.push(y)
@@ -546,6 +556,7 @@ export const getMouseHandler = (doodle) => {
               y: doodle.mouse.dy,
             },
           },
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -610,6 +621,7 @@ export const getMouseHandler = (doodle) => {
               y: doodle.mouse.dy,
             },
           },
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -662,6 +674,7 @@ export const getMouseHandler = (doodle) => {
           id: null,
           type: doodle.tools.path,
           pos: [doodle.mouse.dx, doodle.mouse.dy],
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -697,6 +710,7 @@ export const getMouseHandler = (doodle) => {
           id: null,
           type: doodle.tools.closed_path,
           pos: [doodle.mouse.dx, doodle.mouse.dy],
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -737,6 +751,7 @@ export const getMouseHandler = (doodle) => {
             doodle.mouse.dx,
             doodle.mouse.dy,
           ],
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -780,6 +795,7 @@ export const getMouseHandler = (doodle) => {
             doodle.mouse.dx,
             doodle.mouse.dy,
           ],
+          color: doodle.brushColor,
         }
       },
       // 抬起
@@ -815,6 +831,7 @@ export const getMouseHandler = (doodle) => {
           id: new Date().getTime(),
           type: doodle.tools.point,
           pos: [doodle.mouse.dx, doodle.mouse.dy],
+          color: doodle.brushColor,
         })
       },
       // 抬起

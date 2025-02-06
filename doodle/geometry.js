@@ -210,81 +210,84 @@ export const getHoverShape = (doodle) => {
 
 // 生成锚点列表
 export const generateAnchors = (doodle) => {
-  if (!doodle.tempShape) {
+  let getAnchors = (doodle) => {
+    if (!doodle.tempShape) {
+      return []
+    }
+    if (!doodle.tempShape.id) {
+      return []
+    }
+    const shapeGetAnchorsFuncMap = {
+      // 矩形
+      [doodle.tools.rect]: (shape) => {
+        return [
+          // 左上
+          { x: shape.pos[0], y: shape.pos[1] },
+          // 右上
+          { x: shape.pos[0] + shape.pos[2], y: shape.pos[1] },
+          // 左下
+          { x: shape.pos[0], y: shape.pos[1] + shape.pos[3] },
+          // 右下
+          {
+            x: shape.pos[0] + shape.pos[2],
+            y: shape.pos[1] + shape.pos[3],
+          },
+        ]
+      },
+      // 多边形
+      [doodle.tools.polygon]: (shape) => {
+        let ret = []
+        for (let i = 0; i < shape.pos.length; i += 2) {
+          ret.push({
+            x: shape.pos[i],
+            y: shape.pos[i + 1],
+          })
+        }
+        return ret
+      },
+      // 圆
+      [doodle.tools.circle]: (shape) => {
+        return [
+          {
+            x: shape.pos[0] + shape.pos[2],
+            y: shape.pos[1],
+          },
+        ]
+      },
+      // 椭圆
+      [doodle.tools.ellipse]: (shape) => {
+        return [
+          {
+            x: shape.pos[0],
+            y: shape.pos[1] - shape.pos[3],
+          },
+          {
+            x: shape.pos[0] + shape.pos[2],
+            y: shape.pos[1],
+          },
+        ]
+      },
+      // 直线
+      [doodle.tools.line]: (shape) => {
+        return [
+          { x: shape.pos[0], y: shape.pos[1] },
+          { x: shape.pos[2], y: shape.pos[3] },
+        ]
+      },
+      // 箭头直线
+      [doodle.tools.arrow_line]: (shape) => {
+        return [
+          { x: shape.pos[0], y: shape.pos[1] },
+          { x: shape.pos[2], y: shape.pos[3] },
+        ]
+      },
+    }
+    if (shapeGetAnchorsFuncMap[doodle.tempShape.type]) {
+      return shapeGetAnchorsFuncMap[doodle.tempShape.type](doodle.tempShape)
+    }
     return []
   }
-  if (!doodle.tempShape.id) {
-    return []
-  }
-  const shapeGetAnchorsFuncMap = {
-    // 矩形
-    [doodle.tools.rect]: (shape) => {
-      return [
-        // 左上
-        { x: shape.pos[0], y: shape.pos[1] },
-        // 右上
-        { x: shape.pos[0] + shape.pos[2], y: shape.pos[1] },
-        // 左下
-        { x: shape.pos[0], y: shape.pos[1] + shape.pos[3] },
-        // 右下
-        {
-          x: shape.pos[0] + shape.pos[2],
-          y: shape.pos[1] + shape.pos[3],
-        },
-      ]
-    },
-    // 多边形
-    [doodle.tools.polygon]: (shape) => {
-      let ret = []
-      for (let i = 0; i < shape.pos.length; i += 2) {
-        ret.push({
-          x: shape.pos[i],
-          y: shape.pos[i + 1],
-        })
-      }
-      return ret
-    },
-    // 圆
-    [doodle.tools.circle]: (shape) => {
-      return [
-        {
-          x: shape.pos[0] + shape.pos[2],
-          y: shape.pos[1],
-        },
-      ]
-    },
-    // 椭圆
-    [doodle.tools.ellipse]: (shape) => {
-      return [
-        {
-          x: shape.pos[0],
-          y: shape.pos[1] - shape.pos[3],
-        },
-        {
-          x: shape.pos[0] + shape.pos[2],
-          y: shape.pos[1],
-        },
-      ]
-    },
-    // 直线
-    [doodle.tools.line]: (shape) => {
-      return [
-        { x: shape.pos[0], y: shape.pos[1] },
-        { x: shape.pos[2], y: shape.pos[3] },
-      ]
-    },
-    // 箭头直线
-    [doodle.tools.arrow_line]: (shape) => {
-      return [
-        { x: shape.pos[0], y: shape.pos[1] },
-        { x: shape.pos[2], y: shape.pos[3] },
-      ]
-    },
-  }
-  if (shapeGetAnchorsFuncMap[doodle.tempShape.type]) {
-    return shapeGetAnchorsFuncMap[doodle.tempShape.type](doodle.tempShape)
-  }
-  return []
+  doodle.anchors = getAnchors(doodle)
 }
 // 悬浮的锚点
 export const getHoverAnchor = (doodle) => {

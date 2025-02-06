@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@unocss/reset": "^65.4.3",
     "@vueuse/core": "^12.4.0",
     "geometric": "^2.5.5",
     "lodash": "^4.17.21",
@@ -19,6 +20,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "naive-ui": "^2.41.0",
+    "sass": "^1.84.0",
     "unocss": "^65.4.2",
     "vite": "^6.0.5"
   }

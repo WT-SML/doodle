@@ -9,7 +9,7 @@ import {
 import RBush from "rbush"
 import { getBounds } from "./bounds"
 import { generateAnchors, getHoverAnchor, getHoverShape } from "./geometry"
-import _ from "lodash"
+import _, { set } from "lodash"
 import { onKeyStroke } from "@vueuse/core"
 
 export class Doodle {
@@ -45,7 +45,8 @@ export class Doodle {
     y: 0,
   }
   strokeWidth = 2 // 线宽
-  color = "#FF0000" // 颜色
+  defaultColor = "#FF0000" // 默认颜色
+  brushColor = "#FF0000" // 画笔颜色
   hitRadius = 5 // 光标的碰撞半径
   anchorRadius = 5 // 锚点半径
   pointRadius = 6 // 点半径
@@ -54,11 +55,11 @@ export class Doodle {
   hoverAnchor = null // 悬浮的锚点
   // 鼠标
   mouse = {
-    x: 0,
-    y: 0,
-    dx: 0,
-    dy: 0,
-    isPressed: false,
+    x: 0, // 视口x
+    y: 0, // 视口y
+    dx: 0, // 画布x
+    dy: 0, // 画布y
+    isPressed: false, // 是否按下
   }
   constructor(conf) {
     // 存储配置
@@ -81,6 +82,12 @@ export class Doodle {
       this.startLoop()
     })()
   }
+  // 清空标注
+  clear() {
+    this.shapes = []
+    this.anchors = []
+    this.bounds.clear()
+  }
   // 初始化边界
   createBounds() {
     this.bounds = new RBush()
@@ -93,12 +100,14 @@ export class Doodle {
       pressHandler: (e) => {
         handleMouseDown(this)
         // 计算锚点
-        this.anchors = generateAnchors(this)
+        generateAnchors(this)
+        this.mouse.isPressed = true
       },
       releaseHandler: (e) => {
         handleMouseUp(this)
         // 计算锚点
-        this.anchors = generateAnchors(this)
+        generateAnchors(this)
+        this.mouse.isPressed = false
       },
       moveHandler: (e) => {
         // @ts-ignore
@@ -115,6 +124,10 @@ export class Doodle {
         this.hoverShape = getHoverShape(this)
         // 悬浮的
         this.hoverAnchor = getHoverAnchor(this)
+        // 计算锚点
+        generateAnchors(this)
+        // 更新鼠标样式
+        this.updateCursor()
       },
     })
     // 启用鼠标跟踪器
@@ -124,7 +137,12 @@ export class Doodle {
   // 设置模式
   setMode(mode) {
     this.mode = mode
-    this.viewer.setMouseNavEnabled(mode === this.tools.move)
+    this.setPan(mode === this.tools.move)
+  }
+  // 设置允许拖动
+  setPan(pan) {
+    this.viewer.panHorizontal = pan
+    this.viewer.panVertical = pan
   }
   // 销毁
   destroy() {
@@ -218,5 +236,28 @@ export class Doodle {
   // 解析颜色
   parseColor(color) {
     return parseInt(color.replace("#", "0x"), 16)
+  }
+  // 获取所有图形
+  getShapes() {
+    return _.cloneDeep(this.shapes)
+  }
+  // 设置默认颜色
+  setDefaultColor(color) {
+    this.defaultColor = color
+  }
+  // 设置画笔颜色
+  setBrushColor(color) {
+    this.brushColor = color
+  }
+  // 更新鼠标样式
+  updateCursor() {
+    let cursor = "default"
+    if (this.hoverShape) {
+      cursor = "pointer"
+    }
+    if (this.hoverAnchor) {
+      cursor = "pointer"
+    }
+    this.pixiApp.canvas.style.cursor = cursor
   }
 }

@@ -23,11 +23,11 @@ export const render = (doodle) => {
 export const drawShapes = (doodle) => {
   // 已有形状
   for (const shape of doodle.shapes) {
+    if (doodle.tempShape && doodle.tempShape.id === shape.id) continue
     drawShape(shape, doodle)
   }
   // 新增形状
-  if (doodle.tempShape && !doodle.tempShape.id)
-    drawShape(doodle.tempShape, doodle)
+  if (doodle.tempShape) drawShape(doodle.tempShape, doodle)
   // 锚点
   drawAnchors(doodle)
 }
@@ -43,6 +43,9 @@ export const drawShape = (shape, doodle) => {
   const pointRadius =
     (isHover ? doodle.pointRadius + 1 : doodle.pointRadius) / doodle.scale
   const alpha = isEdit ? 0.2 : 0
+  const color = shape.id
+    ? shape.color || doodle.defaultColor
+    : shape.color || doodle.brushColor
 
   const graphics = doodle.graphics
   const pos = shape.pos
@@ -53,34 +56,48 @@ export const drawShape = (shape, doodle) => {
       graphics.rect(pos[0], pos[1], pos[2], pos[3])
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha,
       })
       break
     case doodle.tools.polygon:
       // 多边形
-      graphics.poly(pos)
+      graphics.poly(pos, !!shape.id)
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha,
       })
+      // 闭合锚点
+      if (!shape.id) {
+        const anchorStrokeWidth = (doodle.strokeWidth + 2) / doodle.scale
+        const anchorRadius = doodle.anchorRadius / doodle.scale
+        graphics.circle(pos[0], pos[1], anchorRadius)
+        graphics.stroke({
+          width: anchorStrokeWidth,
+          color: doodle.parseColor(color),
+        })
+        graphics.fill({
+          color: doodle.parseColor("#FFFFFF"),
+          alpha: 1,
+        })
+      }
       break
     case doodle.tools.circle:
       // 圆
       graphics.circle(pos[0], pos[1], pos[2])
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha,
       })
       break
@@ -89,10 +106,10 @@ export const drawShape = (shape, doodle) => {
       graphics.ellipse(pos[0], pos[1], pos[2], pos[3])
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha,
       })
       break
@@ -101,22 +118,22 @@ export const drawShape = (shape, doodle) => {
       graphics.poly(pos, false)
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha,
       })
       break
     case doodle.tools.closed_path:
       // 闭合路径
-      graphics.poly(pos)
+      graphics.poly(pos, !!shape.id)
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha,
       })
       break
@@ -125,10 +142,10 @@ export const drawShape = (shape, doodle) => {
       graphics.poly(pos, false)
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha: 0,
       })
       break
@@ -139,10 +156,10 @@ export const drawShape = (shape, doodle) => {
       graphics.poly(generateArrowPath(shape, doodle), false)
       graphics.stroke({
         width: strokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
         alpha: 0,
       })
       break
@@ -150,10 +167,10 @@ export const drawShape = (shape, doodle) => {
       // 点
       graphics.circle(pos[0], pos[1], pointRadius)
       const myStrokeWidth = (isEdit ? doodle.strokeWidth + 2 : 0) / doodle.scale
-      const fillColor = isEdit ? "#FFFFFF" : shape.color || doodle.color
+      const fillColor = isEdit ? "#FFFFFF" : color
       graphics.stroke({
         width: myStrokeWidth,
-        color: doodle.parseColor(shape.color || doodle.color),
+        color: doodle.parseColor(color),
       })
       graphics.fill({
         color: doodle.parseColor(fillColor),
@@ -184,11 +201,14 @@ export const drawAnchors = (doodle) => {
   const strokeWidth = (doodle.strokeWidth + 2) / doodle.scale
   const anchorRadius = doodle.anchorRadius / doodle.scale
   const graphics = doodle.graphics
+  const color = doodle.tempShape?.id
+    ? doodle.tempShape?.color || doodle.defaultColor
+    : doodle.tempShape?.color || doodle.brushColor
   for (const anchor of doodle.anchors) {
     graphics.circle(anchor.x, anchor.y, anchorRadius)
     graphics.stroke({
       width: strokeWidth,
-      color: doodle.parseColor(doodle.tempShape?.color || doodle.color),
+      color: doodle.parseColor(color),
     })
     graphics.fill({
       color: doodle.parseColor("#FFFFFF"),
