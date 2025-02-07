@@ -9,7 +9,7 @@ import {
 import RBush from "rbush"
 import { getBounds } from "./bounds"
 import { generateAnchors, getHoverAnchor, getHoverShape } from "./geometry"
-import _, { set } from "lodash"
+import _, { first, set } from "lodash"
 import { onKeyStroke } from "@vueuse/core"
 
 export class Doodle {
@@ -98,16 +98,20 @@ export class Doodle {
     const tracker = new osd.MouseTracker({
       element: this.pixiApp.canvas,
       pressHandler: (e) => {
+        this.mouse.isPressed = true
         handleMouseDown(this)
         // 计算锚点
         generateAnchors(this)
-        this.mouse.isPressed = true
+        // 更新鼠标样式
+        this.updateCursor()
       },
       releaseHandler: (e) => {
+        this.mouse.isPressed = false
         handleMouseUp(this)
         // 计算锚点
         generateAnchors(this)
-        this.mouse.isPressed = false
+        // 更新鼠标样式
+        this.updateCursor()
       },
       moveHandler: (e) => {
         // @ts-ignore
@@ -252,11 +256,28 @@ export class Doodle {
   // 更新鼠标样式
   updateCursor() {
     let cursor = "default"
-    if (this.hoverShape) {
+    if (this.mode !== this.tools.move) {
+      // 绘制中，使用十字线
+      cursor = "crosshair"
+    } else if (this.hoverAnchor) {
+      // 悬浮在锚点上
       cursor = "pointer"
-    }
-    if (this.hoverAnchor) {
-      cursor = "pointer"
+    } else if (this.hoverShape) {
+      // 悬浮在shape上
+      // @ts-ignore
+      if (this.tempShape && this.hoverShape?.id === this.tempShape?.id) {
+        // 悬浮的shape是编辑状态
+        if (this.mouse.isPressed) {
+          // 按下状态
+          cursor = "grabbing"
+        } else {
+          // 未按下状态
+          cursor = "grab"
+        }
+      } else {
+        // 普通悬浮
+        cursor = "pointer"
+      }
     }
     this.pixiApp.canvas.style.cursor = cursor
   }

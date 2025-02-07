@@ -1,4 +1,5 @@
 import { lineLength, pointInPolygon } from "geometric"
+import { getBounds } from "./bounds"
 
 // 点是否在shape内
 export const pointInShape = (doodle, point, shape, buffer) => {
@@ -182,9 +183,24 @@ export const getHoverShape = (doodle) => {
     maxY: dy + buffer,
   }
   // 外接矩形的粗略命中
+  // 修正临时shape的位置
+  if (doodle.tempShape && doodle.tempShape.id) {
+    doodle.bounds.remove(doodle.tempShape, (a, b) => {
+      return a.id === b.id
+    })
+    doodle.bounds.insert(getBounds(doodle.tempShape, doodle))
+  }
   const cursoryHitBounds = doodle.bounds.search(mouseBounds)
   // 详细的命中
-  const shapes = doodle.shapes
+  // 修正临时shape
+  const shapes = [...doodle.shapes]
+  if (doodle.tempShape && doodle.tempShape.id) {
+    shapes.splice(
+      shapes.findIndex((item) => item.id === doodle.tempShape.id),
+      1
+    )
+    shapes.push(doodle.tempShape)
+  }
   const detailedHitBounds = cursoryHitBounds.filter((bounds) => {
     const shape = shapes.find((item) => item.id === bounds.id)
     if (shape?.type === doodle.tools.point) {
