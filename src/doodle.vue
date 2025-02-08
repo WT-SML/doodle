@@ -14,6 +14,106 @@ import {
   NMessageProvider,
   NColorPicker,
 } from "naive-ui"
+import {
+  Application,
+  Assets,
+  Buffer,
+  BufferUsage,
+  Geometry,
+  GlProgram,
+  Mesh,
+  Shader,
+} from "pixi.js"
+// import fragment from "./instancedGeometry.frag"
+// import vertex from "./instancedGeometry.vert"
+// import source from "./instancedGeometry.wgsl"
+
+const fragment = `
+in vec2 vUV;
+uniform sampler2D uTexture;
+uniform float time;
+
+void main() {
+    gl_FragColor = texture(uTexture, vUV + sin( (time + (vUV.x) * 14.) ) * 0.1 );
+}
+`
+const vertex = `
+in vec2 aPosition;
+in vec2 aUV;
+in vec2 aPositionOffset;
+
+out vec2 vUV;
+
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+
+
+void main() {
+
+    mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+    gl_Position = vec4((mvp * vec3(aPosition + aPositionOffset, 1.0)).xy, 0.0, 1.0);
+
+    vUV = aUV;
+}
+`
+const source = `
+struct GlobalUniforms {
+    uProjectionMatrix:mat3x3<f32>,
+    uWorldTransformMatrix:mat3x3<f32>,
+    uWorldColorAlpha: vec4<f32>,
+    uResolution: vec2<f32>,
+}
+
+struct LocalUniforms {
+    uTransformMatrix:mat3x3<f32>,
+    uColor:vec4<f32>,
+    uRound:f32,
+}
+
+
+@group(0) @binding(0) var<uniform> globalUniforms : GlobalUniforms;
+@group(1) @binding(0) var<uniform> localUniforms : LocalUniforms;
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) vUV: vec2<f32>,
+};
+
+
+@vertex
+fn mainVert(
+    @location(0) aPosition : vec2<f32>,
+    @location(1) aUV : vec2<f32>,
+    @location(2) aPositionOffset : vec2<f32>,
+) -> VertexOutput {     
+    var mvp = globalUniforms.uProjectionMatrix 
+        * globalUniforms.uWorldTransformMatrix 
+        * localUniforms.uTransformMatrix;
+    
+    var output: VertexOutput;
+
+    output.position = vec4<f32>(mvp * vec3<f32>(aPosition+aPositionOffset, 1.0), 1.0);
+    output.vUV = aUV;
+
+    return output; 
+};
+
+struct WaveUniforms {
+    time:f32,
+}
+
+@group(2) @binding(1) var uTexture : texture_2d<f32>;
+@group(2) @binding(2) var uSampler : sampler;
+@group(2) @binding(3) var<uniform> waveUniforms : WaveUniforms;
+
+@fragment
+fn mainFrag(
+    @location(0) vUV: vec2<f32>,
+) -> @location(0) vec4<f32> {
+    return textureSample(uTexture, uSampler, vUV + sin( (waveUniforms.time + (vUV.x) * 14.) ) * 0.1);
+};
+`
 
 const message = useMessage()
 
@@ -62,20 +162,20 @@ const initDoodle = () => {
   const doodle = createDoodle({
     viewer: state.viewer,
     onAdd: (shape) => {
-      state.doodle.addShape(shape)
+      doodle.addShape(shape)
     },
     onRemove: (shape) => {
-      state.doodle.removeShape(shape)
+      doodle.removeShape(shape)
     },
     onUpdate: (shape) => {
-      state.doodle.updateShape(shape)
+      doodle.updateShape(shape)
     },
   })
   state.doodle = markRaw(doodle)
   // 初始化模式
-  state.mode = state.doodle.mode
+  state.mode = doodle.mode
   // 初始化画笔颜色
-  state.brushColor = state.doodle.brushColor
+  state.brushColor = doodle.brushColor
 }
 // 销毁
 const destroy = () => {
@@ -89,16 +189,100 @@ const init = () => {
   // 初始化标注插件
   initDoodle()
   // 渲染默认的 shapes
-  state.doodle.addShapes(defaultShapes)
+  setTimeout(() => {
+    state.doodle.addShapes(defaultShapes)
+  }, 1000)
 }
 // 清空标注
 const clear = () => {
   state.doodle.clear()
 }
 // 随机生成10000个点标注
-const random10000Points = () => {
-  const points = randomPoints(state.viewer, 10000)
-  state.doodle.addShapes(points)
+const random10000Points = async () => {
+  const points = randomPoints(state.viewer, 100000)
+  // doodle.addShapes(points)
+  const spinnyBG = await Assets.load(
+    "https://pixijs.com/assets/bg_scene_rotate.jpg"
+  )
+  const totalTriangles = points.length
+  const instancePositionBuffer = new Buffer({
+    data: new Float32Array(totalTriangles * 2),
+    usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+  })
+  const triangles = []
+  for (const i in points) {
+    const v = points[i]
+    triangles[i] = {
+      x: v.pos[0],
+      y: v.pos[1],
+      ox: v.pos[0],
+      oy: v.pos[1],
+      speed: 1 + Math.random() * 2,
+    }
+  }
+  const geometry = new Geometry({
+    attributes: {
+      aPosition: [
+        -10,
+        -10, // x, y
+        10,
+        -10, // x, y
+        10,
+        10, // x, y,
+        -10,
+        10, // x, y,
+      ],
+      aUV: [0, 0, 1, 0, 1, 1, 0, 1],
+      aPositionOffset: {
+        buffer: instancePositionBuffer,
+        instance: true,
+      },
+    },
+    indexBuffer: [0, 1, 2, 0, 2, 3],
+    instanceCount: totalTriangles,
+  })
+  const gl = { vertex, fragment }
+  const gpu = {
+    vertex: {
+      entryPoint: "mainVert",
+      source,
+    },
+    fragment: {
+      entryPoint: "mainFrag",
+      source,
+    },
+  }
+  const shader = Shader.from({
+    gl,
+    gpu,
+    resources: {
+      uTexture: spinnyBG.source,
+      uSampler: spinnyBG.source.style,
+      waveUniforms: {
+        time: { value: 1, type: "f32" },
+      },
+    },
+  })
+  const triangleMesh = new Mesh({
+    geometry,
+    shader,
+  })
+  const app = state.doodle.pixiApp
+  app.stage.addChild(triangleMesh)
+  app.ticker.add(() => {
+    const scale = state.doodle.scale
+    triangleMesh.scale = 1 / scale
+    const data = instancePositionBuffer.data
+    let count = 0
+    for (let i = 0; i < totalTriangles; i++) {
+      const triangle = triangles[i]
+      triangle.x = triangle.ox * scale
+      triangle.y = triangle.oy * scale
+      data[count++] = triangle.x
+      data[count++] = triangle.y
+    }
+    instancePositionBuffer.update()
+  })
 }
 // 设置模式
 const setMode = (mode) => {
