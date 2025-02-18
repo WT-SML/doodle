@@ -239,9 +239,10 @@ export class Doodle {
 
     const container = new Container()
     app.stage.addChild(container)
+    this.container = container
 
     // const texture = Texture.WHITE
-    const texture = await Assets.load("https://pixijs.com/assets/bunny.png")
+    // const texture = await Assets.load("https://pixijs.com/assets/bunny.png")
     // const points = randomPoints(this.viewer, 10000)
     // for (const v of points) {
     //   const bunny = new Sprite(texture)
@@ -264,9 +265,9 @@ export class Doodle {
       this.pixiApp.stage.x = p.x
       this.pixiApp.stage.y = p.y
       this.pixiApp.stage.scale = scale
-      for (const v of this.points) {
-        v.scale = 1 / this.scale
-      }
+      // for (const v of this.points) {
+      //   v.scale = 1 / this.scale
+      // }
     })
     // @ts-ignore
     window.__PIXI_DEVTOOLS__ = {

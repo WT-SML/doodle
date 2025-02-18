@@ -24,96 +24,6 @@ import {
   Mesh,
   Shader,
 } from "pixi.js"
-// import fragment from "./instancedGeometry.frag"
-// import vertex from "./instancedGeometry.vert"
-// import source from "./instancedGeometry.wgsl"
-
-const fragment = `
-in vec2 vUV;
-uniform sampler2D uTexture;
-uniform float time;
-
-void main() {
-    gl_FragColor = texture(uTexture, vUV + sin( (time + (vUV.x) * 14.) ) * 0.1 );
-}
-`
-const vertex = `
-in vec2 aPosition;
-in vec2 aUV;
-in vec2 aPositionOffset;
-
-out vec2 vUV;
-
-uniform mat3 uProjectionMatrix;
-uniform mat3 uWorldTransformMatrix;
-uniform mat3 uTransformMatrix;
-
-
-void main() {
-
-    mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
-    gl_Position = vec4((mvp * vec3(aPosition + aPositionOffset, 1.0)).xy, 0.0, 1.0);
-
-    vUV = aUV;
-}
-`
-const source = `
-struct GlobalUniforms {
-    uProjectionMatrix:mat3x3<f32>,
-    uWorldTransformMatrix:mat3x3<f32>,
-    uWorldColorAlpha: vec4<f32>,
-    uResolution: vec2<f32>,
-}
-
-struct LocalUniforms {
-    uTransformMatrix:mat3x3<f32>,
-    uColor:vec4<f32>,
-    uRound:f32,
-}
-
-
-@group(0) @binding(0) var<uniform> globalUniforms : GlobalUniforms;
-@group(1) @binding(0) var<uniform> localUniforms : LocalUniforms;
-
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) vUV: vec2<f32>,
-};
-
-
-@vertex
-fn mainVert(
-    @location(0) aPosition : vec2<f32>,
-    @location(1) aUV : vec2<f32>,
-    @location(2) aPositionOffset : vec2<f32>,
-) -> VertexOutput {     
-    var mvp = globalUniforms.uProjectionMatrix 
-        * globalUniforms.uWorldTransformMatrix 
-        * localUniforms.uTransformMatrix;
-    
-    var output: VertexOutput;
-
-    output.position = vec4<f32>(mvp * vec3<f32>(aPosition+aPositionOffset, 1.0), 1.0);
-    output.vUV = aUV;
-
-    return output; 
-};
-
-struct WaveUniforms {
-    time:f32,
-}
-
-@group(2) @binding(1) var uTexture : texture_2d<f32>;
-@group(2) @binding(2) var uSampler : sampler;
-@group(2) @binding(3) var<uniform> waveUniforms : WaveUniforms;
-
-@fragment
-fn mainFrag(
-    @location(0) vUV: vec2<f32>,
-) -> @location(0) vec4<f32> {
-    return textureSample(uTexture, uSampler, vUV + sin( (waveUniforms.time + (vUV.x) * 14.) ) * 0.1);
-};
-`
 
 const message = useMessage()
 
@@ -199,69 +109,130 @@ const clear = () => {
 }
 // 随机生成10000个点标注
 const random10000Points = async () => {
-  const points = randomPoints(state.viewer, 100000)
+  const points = randomPoints(state.viewer, 10000)
   // doodle.addShapes(points)
-  const spinnyBG = await Assets.load(
-    "https://pixijs.com/assets/bg_scene_rotate.jpg"
-  )
+
+  const vertex = `
+in vec2 aPosition;
+in vec2 aPositionOffset;
+in vec3 aColor;
+
+out vec3 vColor;
+
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+uniform mat3 uTransformMatrix;
+
+void main() {
+    mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+    gl_Position = vec4((mvp * vec3(aPosition + aPositionOffset, 1.0)).xy, 0.0, 1.0);
+    vColor = aColor; 
+}
+    
+    `
+
+  const fragment = ` 
+  in vec3 vColor;
+  void main() {
+    gl_FragColor = vec4(vColor, 1.0);
+}
+    `
+
   const totalTriangles = points.length
   const instancePositionBuffer = new Buffer({
     data: new Float32Array(totalTriangles * 2),
     usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
   })
+  const instanceColorBuffer = new Buffer({
+    data: new Float32Array(totalTriangles * 3), // 每个三角形三个值（r, g, b）
+    usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+  })
   const triangles = []
+  const colorData = instanceColorBuffer.data
+
+  function hexToRGB(hex) {
+    // 去掉可能存在的 #
+    hex = hex.replace(/^#/, '');
+    // 将 3 位简写转为 6 位
+    if(hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+    }
+    const intVal = parseInt(hex, 16);
+    const r = ((intVal >> 16) & 255) / 255;
+    const g = ((intVal >> 8) & 255) / 255;
+    const b = (intVal & 255) / 255;
+    return [r, g, b];
+}
+
   for (const i in points) {
     const v = points[i]
+    const color = hexToRGB(v.color)
     triangles[i] = {
       x: v.pos[0],
       y: v.pos[1],
       ox: v.pos[0],
       oy: v.pos[1],
       speed: 1 + Math.random() * 2,
+      r: color[0],
+      g: color[1],
+      b: color[2],
     }
+    const { r, g, b } = triangles[i]
+    const index = i * 3
+    colorData[index] = r
+    colorData[index + 1] = g
+    colorData[index + 2] = b
+  }
+  instanceColorBuffer.update()
+
+  // 设置圆形近似的分段数和半径
+  const segments = 40
+  const radius = 6
+  const vertexCount = segments + 2 // 中心点 + 圆周上 (segments + 1) 个点（闭合圆周）
+
+  // 创建顶点数组，每个顶点 2 个分量 (x, y)
+  const positions = new Float32Array(vertexCount * 2)
+
+  // 第一个顶点为圆心，位置 (0, 0)；对应的 UV 为 (0.5, 0.5)
+  positions[0] = 0
+  positions[1] = 0
+
+  // 生成圆周上的顶点数据
+  for (let i = 0; i <= segments; i++) {
+    const angle = (i / segments) * Math.PI * 2
+    const x = Math.cos(angle) * radius
+    const y = Math.sin(angle) * radius
+    // 将顶点数据存入 positions 数组
+    positions[(i + 1) * 2] = x
+    positions[(i + 1) * 2 + 1] = y
+  }
+
+  // 如果不指定绘制模式，需要生成索引数组将三角扇转换为三角形列表
+  // 每个三角形使用圆心（索引 0）和圆周上相邻的两个点
+  const indices = new Uint16Array(segments * 3)
+  for (let i = 0; i < segments; i++) {
+    indices[i * 3] = 0 // 圆心
+    indices[i * 3 + 1] = i + 1 // 当前圆周点
+    indices[i * 3 + 2] = i + 2 // 下一个圆周点
   }
   const geometry = new Geometry({
     attributes: {
-      aPosition: [
-        -10,
-        -10, // x, y
-        10,
-        -10, // x, y
-        10,
-        10, // x, y,
-        -10,
-        10, // x, y,
-      ],
-      aUV: [0, 0, 1, 0, 1, 1, 0, 1],
+      aPosition: positions,
       aPositionOffset: {
         buffer: instancePositionBuffer,
         instance: true,
       },
+      aColor: {
+        buffer: instanceColorBuffer,
+        instance: true,
+      },
     },
-    indexBuffer: [0, 1, 2, 0, 2, 3],
+    indexBuffer: indices,
     instanceCount: totalTriangles,
   })
   const gl = { vertex, fragment }
-  const gpu = {
-    vertex: {
-      entryPoint: "mainVert",
-      source,
-    },
-    fragment: {
-      entryPoint: "mainFrag",
-      source,
-    },
-  }
   const shader = Shader.from({
     gl,
-    gpu,
-    resources: {
-      uTexture: spinnyBG.source,
-      uSampler: spinnyBG.source.style,
-      waveUniforms: {
-        time: { value: 1, type: "f32" },
-      },
-    },
   })
   const triangleMesh = new Mesh({
     geometry,
