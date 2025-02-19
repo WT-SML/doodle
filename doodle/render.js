@@ -1,12 +1,9 @@
 import osd from "openseadragon"
 import { lineAngle, pointRotate } from "geometric"
-import { Sprite } from "pixi.js"
-import { Assets } from "pixi.js"
-import { Texture } from "pixi.js"
 
 // 渲染方法
 export const render = (doodle) => {
-  // doodle.pixiApp.stage.removeChildren()
+  doodle.graphics.clear()
   const viewport = doodle.viewer.viewport
   const flipped = viewport.getFlip()
   const p = viewport.pixelFromPoint(new osd.Point(0, 0), true)
@@ -19,21 +16,7 @@ export const render = (doodle) => {
   doodle.pixiApp.stage.x = p.x
   doodle.pixiApp.stage.y = p.y
   doodle.pixiApp.stage.scale = scale
-  // drawShapes(doodle)
-  for (const v of doodle.points) {
-    v.scale = (1 / doodle.scale)
-  }
-  // for (const shape of doodle.shapes) {
-  //   const pos = shape.pos
-  //   const bunny = new Sprite(Texture.WHITE)
-  //   bunny.x = pos[0]
-  //   bunny.y = pos[1]
-  //   bunny.width = 10
-  //   bunny.height = 10
-  //   bunny.tint = 0xff0000
-  //   bunny.scale = 1 / doodle.scale
-  //   doodle.pixiApp.stage.addChild(bunny)
-  // }
+  drawShapes(doodle)
 }
 
 // 绘制shapes

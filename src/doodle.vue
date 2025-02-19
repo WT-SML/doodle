@@ -14,16 +14,9 @@ import {
   NMessageProvider,
   NColorPicker,
 } from "naive-ui"
-import {
-  Application,
-  Assets,
-  Buffer,
-  BufferUsage,
-  Geometry,
-  GlProgram,
-  Mesh,
-  Shader,
-} from "pixi.js"
+import { Buffer, BufferUsage, Geometry, Mesh, Shader } from "pixi.js"
+import { fragment, vertex } from "../doodle/gl"
+import { generateCircleGeometry, hexToRGB } from "../doodle/tool"
 
 const message = useMessage()
 
@@ -99,70 +92,49 @@ const init = () => {
   // 初始化标注插件
   initDoodle()
   // 渲染默认的 shapes
-  setTimeout(() => {
-    state.doodle.addShapes(defaultShapes)
-  }, 1000)
+  state.doodle.addShapes(defaultShapes)
 }
 // 清空标注
 const clear = () => {
   state.doodle.clear()
+}
+let instancePositionBuffer
+let instanceColorBuffer
+let geometry
+const test = () => {
+  // const point = randomPoints(state.viewer, 1)[0]
+  // let newLength = instancePositionBuffer.data.length + 2
+  // let newArray = new Float32Array(newLength)
+  // newArray.set(instancePositionBuffer.data, 0) // 复制原数组到新数组
+  // newArray[newLength - 1] = point.pos[0] // 添加新元素
+  // newArray[newLength - 2] = point.pos[1] // 添加新元素
+  // instancePositionBuffer.data = newArray
+
+  // newLength = instanceColorBuffer.data.length + 3
+  // newArray = new Float32Array(newLength)
+  // newArray.set(instanceColorBuffer.data, 0) // 复制原数组到新数组
+  // newArray[newLength - 1] = 255 // 添加新元素
+  // newArray[newLength - 2] = 0 // 添加新元素
+  // newArray[newLength - 3] = 0 // 添加新元素
+  // instanceColorBuffer.data = newArray
+  // geometry.instanceCount--
 }
 // 随机生成10000个点标注
 const random10000Points = async () => {
   const points = randomPoints(state.viewer, 10000)
   // doodle.addShapes(points)
 
-  const vertex = `
-in vec2 aPosition;
-in vec2 aPositionOffset;
-in vec3 aColor;
-
-out vec3 vColor;
-
-uniform mat3 uProjectionMatrix;
-uniform mat3 uWorldTransformMatrix;
-uniform mat3 uTransformMatrix;
-
-void main() {
-    mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
-    gl_Position = vec4((mvp * vec3(aPosition + aPositionOffset, 1.0)).xy, 0.0, 1.0);
-    vColor = aColor; 
-}
-    
-    `
-
-  const fragment = ` 
-  in vec3 vColor;
-  void main() {
-    gl_FragColor = vec4(vColor, 1.0);
-}
-    `
-
   const totalTriangles = points.length
-  const instancePositionBuffer = new Buffer({
+  instancePositionBuffer = new Buffer({
     data: new Float32Array(totalTriangles * 2),
     usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
   })
-  const instanceColorBuffer = new Buffer({
+  instanceColorBuffer = new Buffer({
     data: new Float32Array(totalTriangles * 3), // 每个三角形三个值（r, g, b）
     usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
   })
   const triangles = []
   const colorData = instanceColorBuffer.data
-
-  function hexToRGB(hex) {
-    // 去掉可能存在的 #
-    hex = hex.replace(/^#/, '');
-    // 将 3 位简写转为 6 位
-    if(hex.length === 3) {
-        hex = hex.split('').map(c => c + c).join('');
-    }
-    const intVal = parseInt(hex, 16);
-    const r = ((intVal >> 16) & 255) / 255;
-    const g = ((intVal >> 8) & 255) / 255;
-    const b = (intVal & 255) / 255;
-    return [r, g, b];
-}
 
   for (const i in points) {
     const v = points[i]
@@ -185,37 +157,12 @@ void main() {
   }
   instanceColorBuffer.update()
 
-  // 设置圆形近似的分段数和半径
-  const segments = 40
-  const radius = 6
-  const vertexCount = segments + 2 // 中心点 + 圆周上 (segments + 1) 个点（闭合圆周）
+  const { positions, indices } = generateCircleGeometry(
+    40,
+    state.doodle.pointRadius
+  )
 
-  // 创建顶点数组，每个顶点 2 个分量 (x, y)
-  const positions = new Float32Array(vertexCount * 2)
-
-  // 第一个顶点为圆心，位置 (0, 0)；对应的 UV 为 (0.5, 0.5)
-  positions[0] = 0
-  positions[1] = 0
-
-  // 生成圆周上的顶点数据
-  for (let i = 0; i <= segments; i++) {
-    const angle = (i / segments) * Math.PI * 2
-    const x = Math.cos(angle) * radius
-    const y = Math.sin(angle) * radius
-    // 将顶点数据存入 positions 数组
-    positions[(i + 1) * 2] = x
-    positions[(i + 1) * 2 + 1] = y
-  }
-
-  // 如果不指定绘制模式，需要生成索引数组将三角扇转换为三角形列表
-  // 每个三角形使用圆心（索引 0）和圆周上相邻的两个点
-  const indices = new Uint16Array(segments * 3)
-  for (let i = 0; i < segments; i++) {
-    indices[i * 3] = 0 // 圆心
-    indices[i * 3 + 1] = i + 1 // 当前圆周点
-    indices[i * 3 + 2] = i + 2 // 下一个圆周点
-  }
-  const geometry = new Geometry({
+  geometry = new Geometry({
     attributes: {
       aPosition: positions,
       aPositionOffset: {
@@ -339,6 +286,7 @@ onMounted(() => {
             <n-button size="tiny" @click="copyAllShapes()">
               复制所有标注信息
             </n-button>
+            <n-button size="tiny" @click="test()"> 测试 </n-button>
           </template>
         </div>
       </div>

@@ -1,5 +1,13 @@
-import { Application, Graphics, Container, Texture } from "pixi.js"
-import { drawShapes, render } from "./render"
+import {
+  Application,
+  Graphics,
+  Buffer,
+  Mesh,
+  Shader,
+  Geometry,
+  BufferUsage,
+} from "pixi.js"
+import { render } from "./render"
 import osd from "openseadragon"
 import {
   handleMouseDown,
@@ -9,25 +17,24 @@ import {
 import RBush from "rbush"
 import { getBounds } from "./bounds"
 import { generateAnchors, getHoverAnchor, getHoverShape } from "./geometry"
-import _, { first, set } from "lodash"
+import _ from "lodash"
 import { onKeyStroke } from "@vueuse/core"
-import { Assets } from "pixi.js"
-import { Sprite } from "pixi.js"
-import { randomPoints } from "../src/tools"
+import { fragment, vertex } from "./gl"
+import { generateCircleGeometry } from "./tool"
 
 export class Doodle {
   // 工具列表
   tools = {
-    move: "MOVE", // 移动
-    rect: "RECT", // 矩形
-    polygon: "POLYGON", // 多边形
-    circle: "CIRCLE", // 圆
-    ellipse: "ELLIPSE", // 椭圆
-    path: "PATH", // 路径
-    closed_path: "CLOSED_PATH", // 闭合路径
-    line: "LINE", // 直线
-    arrow_line: "ARROW_LINE", // 箭头直线
-    point: "POINT", // 点
+    move: "move", // 移动
+    rect: "rect", // 矩形
+    polygon: "polygon", // 多边形
+    circle: "circle", // 圆
+    ellipse: "ellipse", // 椭圆
+    path: "path", // 路径
+    closed_path: "closed_path", // 闭合路径
+    line: "line", // 直线
+    arrow_line: "arrow_line", // 箭头直线
+    point: "point", // 点
   }
   // 配置
   conf = {
@@ -141,9 +148,6 @@ export class Doodle {
     // 启用鼠标跟踪器
     tracker.setTracking(true)
     this.tracker = tracker
-    this.viewer.addHandler("animation", () => {
-      // render(this)
-    })
   }
   // 设置模式
   setMode(mode) {
@@ -177,7 +181,7 @@ export class Doodle {
   // 帧循环
   startLoop() {
     this.pixiApp.ticker.add((time) => {
-      // render(this)
+      render(this)
     })
   }
   // 添加图形（批量）
@@ -187,8 +191,6 @@ export class Doodle {
     for (const shape of _shapes) {
       this.bounds.insert(getBounds(shape, this))
     }
-    render(this)
-    // drawShapes(this)
   }
   // 添加图形
   addShape(shape) {
@@ -228,7 +230,6 @@ export class Doodle {
     const osdDom = this.viewer.canvas
     const app = new Application()
     this.pixiApp = app
-    this.texture = await Assets.load("/1.png")
     await app.init({ resizeTo: osdDom, backgroundAlpha: 0 })
     // @ts-ignore
     osdDom.appendChild(app.canvas)
@@ -237,38 +238,45 @@ export class Doodle {
     app.canvas.style.top = "0"
     app.canvas.style.left = "0"
 
-    const container = new Container()
-    app.stage.addChild(container)
-    this.container = container
+    // 图形
+    const graphics = new Graphics()
+    this.graphics = graphics
+    app.stage.addChild(graphics)
 
-    // const texture = Texture.WHITE
-    // const texture = await Assets.load("https://pixijs.com/assets/bunny.png")
-    // const points = randomPoints(this.viewer, 10000)
-    // for (const v of points) {
-    //   const bunny = new Sprite(texture)
-    //   bunny.anchor.set(0.5)
-    //   bunny.x = v.pos[0]
-    //   bunny.y = v.pos[1]
-    //   container.addChild(bunny)
-    //   this.points.push(bunny)
-    // }
-    app.ticker.add((time) => {
-      const viewport = this.viewer.viewport
-      const flipped = viewport.getFlip()
-      const p = viewport.pixelFromPoint(new osd.Point(0, 0), true)
-      if (flipped) {
-        p.x = viewport._containerInnerSize.x - p.x
-      }
-      const scale = this.getScale()
-      this.scale = scale
-      this.translate = p
-      this.pixiApp.stage.x = p.x
-      this.pixiApp.stage.y = p.y
-      this.pixiApp.stage.scale = scale
-      // for (const v of this.points) {
-      //   v.scale = 1 / this.scale
-      // }
+    // 点的Mesh
+    const instancePositionBuffer = new Buffer({
+      data: new Float32Array(),
+      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
     })
+    const instanceColorBuffer = new Buffer({
+      data: new Float32Array(), // 每个三角形三个值（r, g, b）
+      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+    })
+    const { positions, indices } = generateCircleGeometry(40, this.pointRadius)
+    const geometry = new Geometry({
+      attributes: {
+        aPosition: positions,
+        aPositionOffset: {
+          buffer: instancePositionBuffer,
+          instance: true,
+        },
+        aColor: {
+          buffer: instanceColorBuffer,
+          instance: true,
+        },
+      },
+      indexBuffer: indices,
+      instanceCount: 0,
+    })
+    const gl = { vertex, fragment }
+    const shader = Shader.from({
+      gl,
+    })
+    const pointMesh = new Mesh({
+      geometry,
+      shader,
+    })
+
     // @ts-ignore
     window.__PIXI_DEVTOOLS__ = {
       app: app,
