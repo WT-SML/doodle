@@ -257,6 +257,12 @@ export class Doodle {
     this.removeShape(shape)
     this.addShape(shape)
   }
+  // 更新图形
+  selectShape(shape) {
+    this.tempShape = _.cloneDeep(shape)
+    // 计算锚点
+    generateAnchors(this)
+  }
   // 创建pixi
   async createPixi() {
     const osdDom = this.viewer.canvas

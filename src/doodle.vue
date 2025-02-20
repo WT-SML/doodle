@@ -184,7 +184,6 @@ onMounted(() => {
             <n-button size="tiny" @click="copyAllShapes()">
               复制所有标注信息
             </n-button>
-            <n-button size="tiny" @click="test()"> 测试 </n-button>
           </template>
         </div>
       </div>
