@@ -20,7 +20,7 @@ import { generateAnchors, getHoverAnchor, getHoverShape } from "./geometry"
 import _ from "lodash"
 import { onKeyStroke } from "@vueuse/core"
 import { fragment, vertex } from "./gl"
-import { generateCircleGeometry } from "./tool"
+import { generateCircleGeometry, hexToRGB } from "./tool"
 
 export class Doodle {
   // 工具列表
@@ -42,6 +42,8 @@ export class Doodle {
   }
   pixiApp // pixi app
   graphics // pixi graphics
+  pointMesh // 点的Mesh
+  points = [] // 点集合
   tracker // 鼠标跟踪器
   mode = this.tools.move // 模式
   viewer // osd的画布
@@ -71,7 +73,6 @@ export class Doodle {
     dy: 0, // 画布y
     isPressed: false, // 是否按下
   }
-  points = []
   constructor(conf) {
     // 存储配置
     this.conf = {
@@ -98,6 +99,7 @@ export class Doodle {
     this.shapes = []
     this.anchors = []
     this.bounds.clear()
+    this.generatePoints()
   }
   // 初始化边界
   createBounds() {
@@ -161,6 +163,7 @@ export class Doodle {
   }
   // 销毁
   destroy() {
+    this.tracker.setTracking(false)
     this.pixiApp.destroy()
   }
   // 监听键盘
@@ -180,9 +183,18 @@ export class Doodle {
   }
   // 帧循环
   startLoop() {
-    this.pixiApp.ticker.add((time) => {
+    this.pixiApp.ticker.add(() => {
       render(this)
     })
+  }
+  generatePoints() {
+    this.points = this.shapes.filter(
+      // @ts-ignore
+      (item) => item.type === this.tools.point && item.id !== this.tempShape?.id
+    )
+    this.pixiApp.stage.removeChild(this.pointMesh)
+    this.pointMesh = this.createPointMesh(this.points)
+    this.pixiApp.stage.addChild(this.pointMesh)
   }
   // 添加图形（批量）
   addShapes(shapes) {
@@ -191,12 +203,18 @@ export class Doodle {
     for (const shape of _shapes) {
       this.bounds.insert(getBounds(shape, this))
     }
+    if (shapes.find((shape) => shape.type === this.tools.point)) {
+      this.generatePoints()
+    }
   }
   // 添加图形
   addShape(shape) {
     const _shape = _.cloneDeep(shape)
     this.shapes.push(_shape)
     this.bounds.insert(getBounds(_shape, this))
+    if (shape.type === this.tools.point) {
+      this.generatePoints()
+    }
   }
   // 删除图形（批量）
   removeShapes(shapes) {
@@ -207,6 +225,13 @@ export class Doodle {
         return a.id === b.id
       })
     }
+    if (shapes.find((shape) => shape.type === this.tools.point)) {
+      this.generatePoints()
+    }
+    // @ts-ignore
+    if (shapes.find((shape) => shape.id === this.tempShape?.id)) {
+      this.tempShape = null
+    }
   }
   // 删除图形
   removeShape(shape) {
@@ -214,6 +239,13 @@ export class Doodle {
     this.bounds.remove(shape, (a, b) => {
       return a.id === b.id
     })
+    if (shape.type === this.tools.point) {
+      this.generatePoints()
+    }
+    // @ts-ignore
+    if (shape.id === this.tempShape?.id) {
+      this.tempShape = null
+    }
   }
   // 更新图形
   updateShapes(shapes) {
@@ -244,38 +276,7 @@ export class Doodle {
     app.stage.addChild(graphics)
 
     // 点的Mesh
-    const instancePositionBuffer = new Buffer({
-      data: new Float32Array(),
-      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
-    })
-    const instanceColorBuffer = new Buffer({
-      data: new Float32Array(), // 每个三角形三个值（r, g, b）
-      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
-    })
-    const { positions, indices } = generateCircleGeometry(40, this.pointRadius)
-    const geometry = new Geometry({
-      attributes: {
-        aPosition: positions,
-        aPositionOffset: {
-          buffer: instancePositionBuffer,
-          instance: true,
-        },
-        aColor: {
-          buffer: instanceColorBuffer,
-          instance: true,
-        },
-      },
-      indexBuffer: indices,
-      instanceCount: 0,
-    })
-    const gl = { vertex, fragment }
-    const shader = Shader.from({
-      gl,
-    })
-    const pointMesh = new Mesh({
-      geometry,
-      shader,
-    })
+    this.generatePoints()
 
     // @ts-ignore
     window.__PIXI_DEVTOOLS__ = {
@@ -332,5 +333,53 @@ export class Doodle {
       }
     }
     this.pixiApp.canvas.style.cursor = cursor
+  }
+  // 创建点Mesh
+  createPointMesh(points) {
+    const length = points.length
+    const instancePositionBuffer = new Buffer({
+      data: new Float32Array(length * 2),
+      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+    })
+    const instanceColorBuffer = new Buffer({
+      data: new Float32Array(length * 3), // 每个三角形三个值（r, g, b）
+      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+    })
+    const colorData = instanceColorBuffer.data
+    for (let _i in points) {
+      let i = Number(_i)
+      const point = points[i]
+      point.rgbColor = hexToRGB(point.color || this.defaultColor)
+      const index = i * 3
+      colorData[index] = point.rgbColor[0]
+      colorData[index + 1] = point.rgbColor[1]
+      colorData[index + 2] = point.rgbColor[2]
+    }
+    instanceColorBuffer.update()
+    const { positions, indices } = generateCircleGeometry(40, this.pointRadius)
+    const geometry = new Geometry({
+      attributes: {
+        aPosition: positions,
+        aPositionOffset: {
+          buffer: instancePositionBuffer,
+          instance: true,
+        },
+        aColor: {
+          buffer: instanceColorBuffer,
+          instance: true,
+        },
+      },
+      indexBuffer: indices,
+      instanceCount: length,
+    })
+    const gl = { vertex, fragment }
+    const shader = Shader.from({
+      gl,
+    })
+    const pointMesh = new Mesh({
+      geometry,
+      shader,
+    })
+    return pointMesh
   }
 }

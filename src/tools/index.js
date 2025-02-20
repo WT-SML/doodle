@@ -16,8 +16,25 @@ export const randomPoints = (viewer, count = 0) => {
     const y = Math.random() * dziHeight
     points.push({
       id: String(Date.now() - count + i),
-      type: "POINT",
+      type: "point",
       pos: [x, y],
+      color: getRandomHexColor(),
+    })
+  }
+  return points
+}
+// 随机矩形标注
+export const randomRects = (viewer, count = 0) => {
+  const dziWidth = viewer.source.width
+  const dziHeight = viewer.source.height
+  const points = []
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * dziWidth
+    const y = Math.random() * dziHeight
+    points.push({
+      id: String(Date.now() - count + i),
+      type: "rect",
+      pos: [x, y, 100, 100],
       color: getRandomHexColor(),
     })
   }

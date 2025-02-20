@@ -14,9 +14,6 @@ import {
   NMessageProvider,
   NColorPicker,
 } from "naive-ui"
-import { Buffer, BufferUsage, Geometry, Mesh, Shader } from "pixi.js"
-import { fragment, vertex } from "../doodle/gl"
-import { generateCircleGeometry, hexToRGB } from "../doodle/tool"
 
 const message = useMessage()
 
@@ -98,109 +95,10 @@ const init = () => {
 const clear = () => {
   state.doodle.clear()
 }
-let instancePositionBuffer
-let instanceColorBuffer
-let geometry
-const test = () => {
-  // const point = randomPoints(state.viewer, 1)[0]
-  // let newLength = instancePositionBuffer.data.length + 2
-  // let newArray = new Float32Array(newLength)
-  // newArray.set(instancePositionBuffer.data, 0) // 复制原数组到新数组
-  // newArray[newLength - 1] = point.pos[0] // 添加新元素
-  // newArray[newLength - 2] = point.pos[1] // 添加新元素
-  // instancePositionBuffer.data = newArray
-
-  // newLength = instanceColorBuffer.data.length + 3
-  // newArray = new Float32Array(newLength)
-  // newArray.set(instanceColorBuffer.data, 0) // 复制原数组到新数组
-  // newArray[newLength - 1] = 255 // 添加新元素
-  // newArray[newLength - 2] = 0 // 添加新元素
-  // newArray[newLength - 3] = 0 // 添加新元素
-  // instanceColorBuffer.data = newArray
-  // geometry.instanceCount--
-}
 // 随机生成10000个点标注
 const random10000Points = async () => {
   const points = randomPoints(state.viewer, 10000)
-  // doodle.addShapes(points)
-
-  const totalTriangles = points.length
-  instancePositionBuffer = new Buffer({
-    data: new Float32Array(totalTriangles * 2),
-    usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
-  })
-  instanceColorBuffer = new Buffer({
-    data: new Float32Array(totalTriangles * 3), // 每个三角形三个值（r, g, b）
-    usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
-  })
-  const triangles = []
-  const colorData = instanceColorBuffer.data
-
-  for (const i in points) {
-    const v = points[i]
-    const color = hexToRGB(v.color)
-    triangles[i] = {
-      x: v.pos[0],
-      y: v.pos[1],
-      ox: v.pos[0],
-      oy: v.pos[1],
-      speed: 1 + Math.random() * 2,
-      r: color[0],
-      g: color[1],
-      b: color[2],
-    }
-    const { r, g, b } = triangles[i]
-    const index = i * 3
-    colorData[index] = r
-    colorData[index + 1] = g
-    colorData[index + 2] = b
-  }
-  instanceColorBuffer.update()
-
-  const { positions, indices } = generateCircleGeometry(
-    40,
-    state.doodle.pointRadius
-  )
-
-  geometry = new Geometry({
-    attributes: {
-      aPosition: positions,
-      aPositionOffset: {
-        buffer: instancePositionBuffer,
-        instance: true,
-      },
-      aColor: {
-        buffer: instanceColorBuffer,
-        instance: true,
-      },
-    },
-    indexBuffer: indices,
-    instanceCount: totalTriangles,
-  })
-  const gl = { vertex, fragment }
-  const shader = Shader.from({
-    gl,
-  })
-  const triangleMesh = new Mesh({
-    geometry,
-    shader,
-  })
-  const app = state.doodle.pixiApp
-  app.stage.addChild(triangleMesh)
-  app.ticker.add(() => {
-    const scale = state.doodle.scale
-    triangleMesh.scale = 1 / scale
-    const data = instancePositionBuffer.data
-    let count = 0
-    for (let i = 0; i < totalTriangles; i++) {
-      const triangle = triangles[i]
-      triangle.x = triangle.ox * scale
-      triangle.y = triangle.oy * scale
-      data[count++] = triangle.x
-      data[count++] = triangle.y
-    }
-    instancePositionBuffer.update()
-  })
+  state.doodle.addShapes(points)
 }
 // 设置模式
 const setMode = (mode) => {

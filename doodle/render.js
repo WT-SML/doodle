@@ -3,7 +3,6 @@ import { lineAngle, pointRotate } from "geometric"
 
 // 渲染方法
 export const render = (doodle) => {
-  doodle.graphics.clear()
   const viewport = doodle.viewer.viewport
   const flipped = viewport.getFlip()
   const p = viewport.pixelFromPoint(new osd.Point(0, 0), true)
@@ -16,14 +15,35 @@ export const render = (doodle) => {
   doodle.pixiApp.stage.x = p.x
   doodle.pixiApp.stage.y = p.y
   doodle.pixiApp.stage.scale = scale
+  // 更新非点图形
   drawShapes(doodle)
+  // Mesh
+  updatePointMesh(doodle)
+}
+// 更新点的Mesh
+export const updatePointMesh = (doodle) => {
+  const scale = doodle.scale
+  doodle.pointMesh.scale = 1 / scale
+  const instancePositionBuffer =
+    doodle.pointMesh.geometry.attributes.aPositionOffset.buffer
+  const data = instancePositionBuffer.data
+  let count = 0
+  for (let _i in doodle.points) {
+    let i = Number(_i)
+    const point = doodle.points[i]
+    data[count++] = point.pos[0] * scale
+    data[count++] = point.pos[1] * scale
+  }
+  instancePositionBuffer.update()
 }
 
 // 绘制shapes
 export const drawShapes = (doodle) => {
+  doodle.graphics.clear()
   // 已有形状
   for (const shape of doodle.shapes) {
     if (doodle.tempShape && doodle.tempShape.id === shape.id) continue
+    if (shape.type === doodle.tools.point) continue
     drawShape(shape, doodle)
   }
   // 新增形状

@@ -89,6 +89,9 @@ export const getMouseHandler = (doodle) => {
               // 当前没有编辑中的形状
             } else {
               doodle.tempShape = _.cloneDeep(doodle.hoverShape)
+              if (doodle.tempShape.type === doodle.tools.point) {
+                doodle.generatePoints()
+              }
             }
             return
           }
@@ -104,6 +107,9 @@ export const getMouseHandler = (doodle) => {
               doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape))
             }
             doodle.tempShape = null
+            if (originalShape.type === doodle.tools.point) {
+              doodle.generatePoints()
+            }
           }
         } else {
           // 长按

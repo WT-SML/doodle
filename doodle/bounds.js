@@ -1,8 +1,6 @@
 // 获取形状边界
 export const getBounds = (shape, doodle) => {
   const shapeTypeGetBoundsFuncMap = {
-    // 移动
-    [doodle.tools.move]: (shape) => {},
     // 矩形
     [doodle.tools.rect]: (shape) => {
       return {
@@ -84,10 +82,6 @@ export const getBounds = (shape, doodle) => {
         id: shape.id,
       }
     },
-    // 多选
-    MULTISELECT: (shape) => {},
-    // 排除
-    EXCLUSION: (shape) => {},
   }
   return shapeTypeGetBoundsFuncMap[shape.type](shape)
 }
