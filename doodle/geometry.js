@@ -183,13 +183,6 @@ export const getHoverShape = (doodle) => {
     maxY: dy + buffer,
   }
   // 外接矩形的粗略命中
-  // 修正临时shape的位置
-  if (doodle.tempShape && doodle.tempShape.id) {
-    doodle.bounds.remove(doodle.tempShape, (a, b) => {
-      return a.id === b.id
-    })
-    doodle.bounds.insert(getBounds(doodle.tempShape, doodle))
-  }
   const cursoryHitBounds = doodle.bounds.search(mouseBounds)
   // 详细的命中
   // 修正临时shape

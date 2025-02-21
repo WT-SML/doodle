@@ -6,22 +6,25 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build-doodle": "rollup --config"
   },
   "dependencies": {
     "@unocss/reset": "^65.4.3",
     "@vueuse/core": "^12.4.0",
     "geometric": "^2.5.5",
     "lodash": "^4.17.21",
-    "nanoid": "^5.1.0",
     "openseadragon": "^5.0.1",
     "pixi.js": "^8.6.6",
     "rbush": "^4.0.1",
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "naive-ui": "^2.41.0",
+    "rollup": "^4.34.8",
     "sass": "^1.84.0",
     "unocss": "^65.4.2",
     "vite": "^6.0.5"

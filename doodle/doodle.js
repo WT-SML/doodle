@@ -126,7 +126,7 @@ export class Doodle {
         // 更新鼠标样式
         this.updateCursor()
       },
-      moveHandler: _.throttle((e) => {
+      moveHandler: (e) => {
         // @ts-ignore
         this.mouse.x = e.position.x
         // @ts-ignore
@@ -139,13 +139,13 @@ export class Doodle {
         handleMouseMove(this)
         // 悬浮的shape
         this.hoverShape = getHoverShape(this)
-        // 悬浮的
+        // 悬浮的锚点
         this.hoverAnchor = getHoverAnchor(this)
         // 计算锚点
         generateAnchors(this)
         // 更新鼠标样式
         this.updateCursor()
-      }, 16),
+      },
     })
     // 启用鼠标跟踪器
     tracker.setTracking(true)
@@ -164,6 +164,7 @@ export class Doodle {
   // 销毁
   destroy() {
     this.tracker.setTracking(false)
+    this.pixiApp.canvas.remove()
     this.pixiApp.destroy()
   }
   // 监听键盘
@@ -221,7 +222,7 @@ export class Doodle {
     const ids = shapes.map((item) => item.id)
     this.shapes = this.shapes.filter((item) => !ids.includes(item.id))
     for (const shape of shapes) {
-      this.bounds.remove(shape, (a, b) => {
+      this.bounds.remove(getBounds(shape, this), (a, b) => {
         return a.id === b.id
       })
     }
@@ -236,7 +237,7 @@ export class Doodle {
   // 删除图形
   removeShape(shape) {
     this.shapes = this.shapes.filter((item) => item.id !== shape.id)
-    this.bounds.remove(shape, (a, b) => {
+    this.bounds.remove(getBounds(shape, this), (a, b) => {
       return a.id === b.id
     })
     if (shape.type === this.tools.point) {

@@ -1,6 +1,6 @@
 import _ from "lodash"
 import { isPolygonToolToStartPointTooClose } from "./geometry"
-import { nanoid } from "nanoid"
+import { getBounds } from "./bounds"
 
 // 鼠标按下
 export const handleMouseDown = (doodle) => {
@@ -86,6 +86,9 @@ export const getMouseHandler = (doodle) => {
                   doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape))
                 }
                 doodle.tempShape = _.cloneDeep(doodle.hoverShape)
+                if (doodle.tempShape.type === doodle.tools.point) {
+                  doodle.generatePoints()
+                }
               }
               // 当前没有编辑中的形状
             } else {
@@ -300,12 +303,17 @@ export const getMouseHandler = (doodle) => {
               }
             },
           }
+          // 修正临时shape的位置
+          doodle.bounds.remove(getBounds(doodle.tempShape, doodle), (a, b) => {
+            return a.id === b.id
+          })
           anchorHandleMoveFuncMap[doodle.tempShape.type](
             doodle.tempShape,
             tempShape,
             tempAnchor,
             diff
           )
+          doodle.bounds.insert(getBounds(doodle.tempShape, doodle))
           return
         }
         // 在编辑的shape上移动
@@ -380,11 +388,16 @@ export const getMouseHandler = (doodle) => {
               shape.pos[1] = cloneShape.pos[1] + diff.y
             },
           }
+          // 修正临时shape的位置
+          doodle.bounds.remove(getBounds(doodle.tempShape, doodle), (a, b) => {
+            return a.id === b.id
+          })
           shapeHandleMoveFuncMap[doodle.tempShape.type](
             doodle.tempShape,
             tempShape,
             diff
           )
+          doodle.bounds.insert(getBounds(doodle.tempShape, doodle))
           return
         }
       },
@@ -424,7 +437,7 @@ export const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -482,7 +495,7 @@ export const getMouseHandler = (doodle) => {
         const completeShape = () => {
           doodle.tempShape.pos.pop()
           doodle.tempShape.pos.pop()
-          doodle.tempShape.id = nanoid()
+          doodle.tempShape.id = window.crypto.randomUUID()
           doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
           doodle.tempShape = null
         }
@@ -576,7 +589,7 @@ export const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -641,7 +654,7 @@ export const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -693,7 +706,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -729,7 +742,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -773,7 +786,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -817,7 +830,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = nanoid()
+        doodle.tempShape.id = window.crypto.randomUUID()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -835,7 +848,7 @@ export const getMouseHandler = (doodle) => {
       // 按下
       handleMouseDown: () => {
         doodle.conf.onAdd({
-          id: nanoid(),
+          id: window.crypto.randomUUID(),
           type: doodle.tools.point,
           pos: [doodle.mouse.dx, doodle.mouse.dy],
           color: doodle.brushColor,
