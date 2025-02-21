@@ -126,7 +126,7 @@ export class Doodle {
         // 更新鼠标样式
         this.updateCursor()
       },
-      moveHandler: (e) => {
+      moveHandler: _.throttle((e) => {
         // @ts-ignore
         this.mouse.x = e.position.x
         // @ts-ignore
@@ -145,7 +145,7 @@ export class Doodle {
         generateAnchors(this)
         // 更新鼠标样式
         this.updateCursor()
-      },
+      }, 16),
     })
     // 启用鼠标跟踪器
     tracker.setTracking(true)

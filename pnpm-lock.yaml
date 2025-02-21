@@ -20,6 +20,9 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      nanoid:
+        specifier: ^5.1.0
+        version: 5.1.0
       openseadragon:
         specifier: ^5.0.1
         version: 5.0.1
@@ -991,6 +994,11 @@ packages:
   nanoid@3.3.8:
     resolution: {integrity: sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
+  nanoid@5.1.0:
+    resolution: {integrity: sha512-zDAl/llz8Ue/EblwSYwdxGBYfj46IM1dhjVi8dyp9LQffoIGxJEAHj2oeZ4uNcgycSRcQ83CnfcZqEJzVDLcDw==}
+    engines: {node: ^18 || >=20}
     hasBin: true
 
   node-addon-api@7.1.1:
@@ -2050,6 +2058,8 @@ snapshots:
       vueuc: 0.4.64(vue@3.5.13)
 
   nanoid@3.3.8: {}
+
+  nanoid@5.1.0: {}
 
   node-addon-api@7.1.1:
     optional: true

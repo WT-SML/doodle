@@ -1,5 +1,6 @@
 import _ from "lodash"
 import { isPolygonToolToStartPointTooClose } from "./geometry"
+import { nanoid } from "nanoid"
 
 // 鼠标按下
 export const handleMouseDown = (doodle) => {
@@ -27,7 +28,7 @@ export const getMouseHandler = (doodle) => {
     [doodle.tools.move]: {
       // 按下
       handleMouseDown: () => {
-        const curMouseDownTimestamp = new Date().getTime()
+        const curMouseDownTimestamp = Date.now()
         lastMouseDownTimestamp = curMouseDownTimestamp // 多边形工具下判断双击完成形状的时间戳
         // 在锚点上按下
         if (doodle.tempShape && doodle.hoverAnchor) {
@@ -62,7 +63,7 @@ export const getMouseHandler = (doodle) => {
       },
       // 抬起
       handleMouseUp: () => {
-        const curMouseDownTimestamp = new Date().getTime()
+        const curMouseDownTimestamp = Date.now()
         const diff = curMouseDownTimestamp - lastMouseDownTimestamp
         if (diff < 150) {
           // 短按
@@ -423,7 +424,7 @@ export const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -456,7 +457,7 @@ export const getMouseHandler = (doodle) => {
     [doodle.tools.polygon]: {
       // 按下
       handleMouseDown: () => {
-        const curMouseDownTimestamp = new Date().getTime()
+        const curMouseDownTimestamp = Date.now()
         const diff = curMouseDownTimestamp - lastMouseDownTimestamp
         lastMouseDownTimestamp = curMouseDownTimestamp
         const clickPoint = isPolygonToolToStartPointTooClose(doodle)
@@ -481,7 +482,7 @@ export const getMouseHandler = (doodle) => {
         const completeShape = () => {
           doodle.tempShape.pos.pop()
           doodle.tempShape.pos.pop()
-          doodle.tempShape.id = new Date().getTime()
+          doodle.tempShape.id = nanoid()
           doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
           doodle.tempShape = null
         }
@@ -575,7 +576,7 @@ export const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -640,7 +641,7 @@ export const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -692,7 +693,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -728,7 +729,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -772,7 +773,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -816,7 +817,7 @@ export const getMouseHandler = (doodle) => {
           doodle.tempShape = null
           return
         }
-        doodle.tempShape.id = new Date().getTime()
+        doodle.tempShape.id = nanoid()
         doodle.conf.onAdd(_.cloneDeep(doodle.tempShape))
         doodle.tempShape = null
       },
@@ -834,7 +835,7 @@ export const getMouseHandler = (doodle) => {
       // 按下
       handleMouseDown: () => {
         doodle.conf.onAdd({
-          id: new Date().getTime(),
+          id: nanoid(),
           type: doodle.tools.point,
           pos: [doodle.mouse.dx, doodle.mouse.dy],
           color: doodle.brushColor,

@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid"
+
 // 随机颜色
 export const getRandomHexColor = () => {
   // 生成 0 ~ 0xFFFFFF 之间的随机整数
@@ -15,7 +17,7 @@ export const randomPoints = (viewer, count = 0) => {
     const x = Math.random() * dziWidth
     const y = Math.random() * dziHeight
     points.push({
-      id: String(Date.now() - count + i),
+      id: nanoid(),
       type: "point",
       pos: [x, y],
       color: getRandomHexColor(),
@@ -32,9 +34,9 @@ export const randomRects = (viewer, count = 0) => {
     const x = Math.random() * dziWidth
     const y = Math.random() * dziHeight
     points.push({
-      id: String(Date.now() - count + i),
+      id: nanoid(),
       type: "rect",
-      pos: [x, y, 100, 100],
+      pos: [x, y, 200, 200],
       color: getRandomHexColor(),
     })
   }

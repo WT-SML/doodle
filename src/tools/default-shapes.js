@@ -1,6 +1,6 @@
 export const defaultShapes = [
   {
-    id: "1703664407808",
+    id: "uLi2gbqSx6sX2a40GiYzr",
     type: "rect",
     pos: [
       1428.144395186827, 2067.3970867637745, 1384.065864471185,
@@ -9,7 +9,7 @@ export const defaultShapes = [
     color: "#0000ff",
   },
   {
-    id: "1703664421536",
+    id: "pPLz_t2P4ph0U9QWyGhxK",
     type: "polygon",
     pos: [
       4654.692843571881, 2049.7656744775177, 4178.644711842939,
@@ -20,13 +20,13 @@ export const defaultShapes = [
     color: "#e74c3c",
   },
   {
-    id: "1703664426141",
+    id: "CkJbGZOs1VE68YAzPUGtf",
     type: "circle",
     pos: [8366.105129829006, 2605.1551614946175, 608.2837238758707],
     color: "#4cd137",
   },
   {
-    id: "1703664429584",
+    id: "DOvh2VnbUDFX97ZUtak4V",
     type: "ellipse",
     pos: [
       12064.293856871438, 2746.206459784674, 1185.712476250791,
@@ -35,7 +35,7 @@ export const defaultShapes = [
     color: "#3271ae",
   },
   {
-    id: "1703664449220",
+    id: "de3_sHY_w3EL76TeKYRZn",
     type: "line",
     pos: [
       8260.316656111463, 4447.637745408488, 9238.860037998733, 6272.4889170361,
@@ -43,7 +43,7 @@ export const defaultShapes = [
     color: "#1abc9c",
   },
   {
-    id: "1703664456384",
+    id: "Jta8DSQvx40n9KXZ7ELyY",
     type: "arrow_line",
     pos: [
       11442.786573780873, 6166.700443318557, 12809.221025965802,
@@ -52,13 +52,13 @@ export const defaultShapes = [
     color: "#9c88ff",
   },
   {
-    id: "1703664461840",
+    id: "v5uPfeRhZFdBMA-Y16D7L",
     type: "point",
     pos: [2098.138062064598, 7603.66054464851],
     color: "#00ff00",
   },
   {
-    id: "1703743272230",
+    id: "YPb7Wk4eQAkNPCKm-kj7C",
     type: "path",
     pos: [
       1877.7454084863837, 4632.767574414186, 1868.9297023432553,
@@ -115,7 +115,7 @@ export const defaultShapes = [
     color: "#e18a3b",
   },
   {
-    id: "1703743277845",
+    id: "QDKEJhCju3gY_ClCOhp9H",
     type: "closed_path",
     pos: [
       4980.873970867638, 4350.6649778340725, 4980.873970867638,

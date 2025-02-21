@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref, reactive, computed, markRaw } from "vue"
 import { createDoodle } from "../doodle/main.js"
-import { randomPoints } from "~/tools"
+import { randomPoints, randomRects } from "~/tools"
 import { defaultShapes } from "~/tools/default-shapes"
 import { defaultOsdConf } from "~/tools/default-osd-conf"
 import osd from "openseadragon"
@@ -100,6 +100,11 @@ const random10000Points = async () => {
   const points = randomPoints(state.viewer, 10000)
   state.doodle.addShapes(points)
 }
+// 随机生成1000个点标注
+const random10000Rects = async () => {
+  const rects = randomRects(state.viewer, 1000)
+  state.doodle.addShapes(rects)
+}
 // 设置模式
 const setMode = (mode) => {
   state.mode = mode
@@ -180,6 +185,9 @@ onMounted(() => {
             <n-button size="tiny" @click="clear()"> 清空所有标注 </n-button>
             <n-button size="tiny" @click="random10000Points()">
               生成10000个点标注
+            </n-button>
+            <n-button size="tiny" @click="random10000Rects()">
+              生成1000个矩形标注
             </n-button>
             <n-button size="tiny" @click="copyAllShapes()">
               复制所有标注信息
