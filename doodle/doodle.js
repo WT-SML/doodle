@@ -277,7 +277,6 @@ export class Doodle {
       resizeTo: osdDom,
       backgroundAlpha: 0,
       antialias: true, // 抗锯齿
-      resolution: window.devicePixelRatio || 1, // 高分辨率支持
     })
     // @ts-ignore
     osdDom.appendChild(app.canvas)
