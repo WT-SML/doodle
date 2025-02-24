@@ -7,13 +7,7 @@ import { defaultOsdConf } from "~/tools/default-osd-conf"
 import osd from "openseadragon"
 import _ from "lodash"
 import { useFps } from "@vueuse/core"
-import {
-  NButton,
-  NCheckbox,
-  useMessage,
-  NMessageProvider,
-  NColorPicker,
-} from "naive-ui"
+import { NButton, NCheckbox, useMessage, NColorPicker } from "naive-ui"
 
 const message = useMessage()
 
@@ -137,7 +131,6 @@ onMounted(() => {
 
 <template>
   <div class="w-100vw h-100vh overflow-hidden flex flex-col">
-    <n-message-provider />
     <!-- 顶部导航 -->
     <div
       class="h-40px w-full flex-shrink-0 flex justify-between items-center px-5 border-b"
