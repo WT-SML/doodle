@@ -131,9 +131,13 @@ export class Doodle {
         this.mouse.x = e.position.x
         // @ts-ignore
         this.mouse.y = e.position.y
-        const dp = this.viewer.viewport.viewerElementToImageCoordinates(
-          new osd.Point(this.mouse.x, this.mouse.y)
+        const viewportPoint = this.viewer.viewport.pointFromPixel(
+          new osd.Point(this.mouse.x, this.mouse.y),
+          true
         )
+        const dp = this.viewer.viewport.viewer.world
+          .getItemAt(0)
+          .viewportToImageCoordinates(viewportPoint.x, viewportPoint.y, true)
         this.mouse.dx = dp.x
         this.mouse.dy = dp.y
         handleMouseMove(this)
@@ -269,7 +273,12 @@ export class Doodle {
     const osdDom = this.viewer.canvas
     const app = new Application()
     this.pixiApp = app
-    await app.init({ resizeTo: osdDom, backgroundAlpha: 0 })
+    await app.init({
+      resizeTo: osdDom,
+      backgroundAlpha: 0,
+      antialias: true, // 抗锯齿
+      resolution: window.devicePixelRatio || 1, // 高分辨率支持
+    })
     // @ts-ignore
     osdDom.appendChild(app.canvas)
     app.canvas.style.pointerEvents = "none"

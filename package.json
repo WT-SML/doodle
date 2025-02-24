@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build-doodle": "rollup --config"
+    "build-doodle": "rollup -c"
   },
   "dependencies": {
     "@unocss/reset": "^65.4.3",
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.2",
     "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "@vitejs/plugin-vue": "^5.2.1",
     "naive-ui": "^2.41.0",
     "rollup": "^4.34.8",

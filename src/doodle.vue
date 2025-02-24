@@ -1,7 +1,6 @@
 <script setup>
 import { onMounted, ref, reactive, computed, markRaw } from "vue"
 import { createDoodle } from "../doodle/main.js"
-// import { createDoodle } from "../doodle-dist/doodle.js"
 import { randomPoints, randomRects } from "~/tools"
 import { defaultShapes } from "~/tools/default-shapes"
 import { defaultOsdConf } from "~/tools/default-osd-conf"

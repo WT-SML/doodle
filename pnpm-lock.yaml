@@ -39,9 +39,12 @@ importers:
       '@rollup/plugin-node-resolve':
         specifier: ^16.0.0
         version: 16.0.0(rollup@4.34.8)
+      '@rollup/plugin-terser':
+        specifier: ^0.4.4
+        version: 0.4.4(rollup@4.34.8)
       '@vitejs/plugin-vue':
         specifier: ^5.2.1
-        version: 5.2.1(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)
+        version: 5.2.1(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)
       naive-ui:
         specifier: ^2.41.0
         version: 2.41.0(vue@3.5.13)
@@ -53,10 +56,10 @@ importers:
         version: 1.84.0
       unocss:
         specifier: ^65.4.2
-        version: 65.4.3(postcss@8.5.1)(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)
+        version: 65.4.3(postcss@8.5.1)(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)
       vite:
         specifier: ^6.0.5
-        version: 6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2)
+        version: 6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2)
 
 packages:
 
@@ -415,6 +418,9 @@ packages:
     resolution: {integrity: sha512-R8gLRTZeyp03ymzP/6Lil/28tGeGEzhx1q2k703KGWRAI1VdvPIXdG70VJc2pAMw3NA6JKL5hhFu1sJX0Mnn/A==}
     engines: {node: '>=6.0.0'}
 
+  '@jridgewell/source-map@0.3.6':
+    resolution: {integrity: sha512-1ZJTZebgqllO79ue2bm3rIGud/bOe0pP5BjSRCRxxYkEZS8STV7zN84UBbiYu7jy+eCKSnVIUgoWWE/tt+shMQ==}
+
   '@jridgewell/sourcemap-codec@1.5.0':
     resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
 
@@ -526,6 +532,15 @@ packages:
     engines: {node: '>=14.0.0'}
     peerDependencies:
       rollup: ^2.78.0||^3.0.0||^4.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
+  '@rollup/plugin-terser@0.4.4':
+    resolution: {integrity: sha512-XHeJC5Bgvs8LfukDwWZp7yeqin6ns8RTl2B9avbejt6tZqsqvVoWI7ZTQrcNsfKEDWBTnTxM8nMDkO2IFFbd0A==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^2.0.0||^3.0.0||^4.0.0
     peerDependenciesMeta:
       rollup:
         optional: true
@@ -810,6 +825,9 @@ packages:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
 
+  buffer-from@1.1.2:
+    resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
+
   bundle-require@5.1.0:
     resolution: {integrity: sha512-3WrrOuZiyaaZPWiEt4G3+IffISVC9HYlWueJEBWED4ZH4aIAC2PnkdnuRrR94M+w6yGWn4AglWtJtBI8YqvgoA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -830,6 +848,9 @@ packages:
 
   colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
+
+  commander@2.20.3:
+    resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
 
   commondir@1.0.1:
     resolution: {integrity: sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==}
@@ -1105,6 +1126,9 @@ packages:
   quickselect@3.0.0:
     resolution: {integrity: sha512-XdjUArbK4Bm5fLLvlm5KpTFOiOThgfWWI4axAZDWg4E/0mKdZyI9tNEfds27qCi1ze/vwTR16kvmmGhRra3c2g==}
 
+  randombytes@2.1.0:
+    resolution: {integrity: sha512-vYl3iOX+4CKUWuxGi9Ukhie6fsqXqS9FE2Zaic4tNFD2N2QQaXOMFbuKK4QmDHC0JO6B1Zp41J0LpT0oR68amQ==}
+
   rbush@4.0.1:
     resolution: {integrity: sha512-IP0UpfeWQujYC8Jg162rMNc01Rf0gWMMAb2Uxus/Q0qOFw4lCcq6ZnQEZwUoJqWyUGJ9th7JjwI4yIWo+uvoAQ==}
 
@@ -1129,6 +1153,9 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  safe-buffer@5.2.1:
+    resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
+
   sass@1.84.0:
     resolution: {integrity: sha512-XDAbhEPJRxi7H0SxrnOpiXFQoUJHwkR2u3Zc4el+fK/Tt5Hpzw5kkQ59qVDfvdaUq6gCrEZIbySFBM2T9DNKHg==}
     engines: {node: '>=14.0.0'}
@@ -1137,17 +1164,35 @@ packages:
   seemly@0.3.10:
     resolution: {integrity: sha512-2+SMxtG1PcsL0uyhkumlOU6Qo9TAQ/WyH7tthnPIOQB05/12jz9naq6GZ6iZ6ApVsO3rr2gsnTf3++OV63kE1Q==}
 
+  serialize-javascript@6.0.2:
+    resolution: {integrity: sha512-Saa1xPByTTq2gdeFZYLLo+RFE35NHZkAbqZeWNd3BpzppeVisAqpDjcp8dyf6uIvEqJRd46jemmyA4iFIeVk8g==}
+
   sirv@3.0.0:
     resolution: {integrity: sha512-BPwJGUeDaDCHihkORDchNyyTvWFhcusy1XMmhEVTQTwGeybFbp8YEmB+njbPnth1FibULBSBVwCQni25XlCUDg==}
     engines: {node: '>=18'}
+
+  smob@1.5.0:
+    resolution: {integrity: sha512-g6T+p7QO8npa+/hNx9ohv1E5pVCmWrVCUzUXJyLdMmftX6ER0oiWY/w9knEonLpnOp6b6FenKnMfR8gqwWdwig==}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  source-map-support@0.5.21:
+    resolution: {integrity: sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w==}
+
+  source-map@0.6.1:
+    resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
+    engines: {node: '>=0.10.0'}
+
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
+
+  terser@5.39.0:
+    resolution: {integrity: sha512-LBAhFyLho16harJoWMg/nZsQYgTrg5jXOn2nCYjRUcZZEdE3qa2zb8QEDRUGVZBW4rlazf2fxkg8tztybTaqWw==}
+    engines: {node: '>=10'}
+    hasBin: true
 
   tinyexec@0.3.2:
     resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
@@ -1469,6 +1514,11 @@ snapshots:
 
   '@jridgewell/set-array@1.2.1': {}
 
+  '@jridgewell/source-map@0.3.6':
+    dependencies:
+      '@jridgewell/gen-mapping': 0.3.8
+      '@jridgewell/trace-mapping': 0.3.25
+
   '@jridgewell/sourcemap-codec@1.5.0': {}
 
   '@jridgewell/trace-mapping@0.3.25':
@@ -1565,6 +1615,14 @@ snapshots:
     optionalDependencies:
       rollup: 4.34.8
 
+  '@rollup/plugin-terser@0.4.4(rollup@4.34.8)':
+    dependencies:
+      serialize-javascript: 6.0.2
+      smob: 1.5.0
+      terser: 5.39.0
+    optionalDependencies:
+      rollup: 4.34.8
+
   '@rollup/pluginutils@5.1.4(rollup@4.34.8)':
     dependencies:
       '@types/estree': 1.0.6
@@ -1648,13 +1706,13 @@ snapshots:
 
   '@types/web-bluetooth@0.0.20': {}
 
-  '@unocss/astro@65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)':
+  '@unocss/astro@65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)':
     dependencies:
       '@unocss/core': 65.4.3
       '@unocss/reset': 65.4.3
-      '@unocss/vite': 65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)
+      '@unocss/vite': 65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)
     optionalDependencies:
-      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2)
+      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2)
     transitivePeerDependencies:
       - rollup
       - supports-color
@@ -1784,7 +1842,7 @@ snapshots:
     dependencies:
       '@unocss/core': 65.4.3
 
-  '@unocss/vite@65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)':
+  '@unocss/vite@65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@rollup/pluginutils': 5.1.4(rollup@4.34.8)
@@ -1794,15 +1852,15 @@ snapshots:
       chokidar: 3.6.0
       magic-string: 0.30.17
       tinyglobby: 0.2.10
-      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2)
+      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2)
     transitivePeerDependencies:
       - rollup
       - supports-color
       - vue
 
-  '@vitejs/plugin-vue@5.2.1(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)':
+  '@vitejs/plugin-vue@5.2.1(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)':
     dependencies:
-      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2)
+      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2)
       vue: 3.5.13
 
   '@vue/compiler-core@3.5.13':
@@ -1895,6 +1953,8 @@ snapshots:
     dependencies:
       fill-range: 7.1.1
 
+  buffer-from@1.1.2: {}
+
   bundle-require@5.1.0(esbuild@0.24.2):
     dependencies:
       esbuild: 0.24.2
@@ -1919,6 +1979,8 @@ snapshots:
       readdirp: 4.1.1
 
   colorette@2.0.20: {}
+
+  commander@2.20.3: {}
 
   commondir@1.0.1: {}
 
@@ -2220,6 +2282,10 @@ snapshots:
 
   quickselect@3.0.0: {}
 
+  randombytes@2.1.0:
+    dependencies:
+      safe-buffer: 5.2.1
+
   rbush@4.0.1:
     dependencies:
       quickselect: 3.0.0
@@ -2263,6 +2329,8 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.34.8
       fsevents: 2.3.3
 
+  safe-buffer@5.2.1: {}
+
   sass@1.84.0:
     dependencies:
       chokidar: 4.0.3
@@ -2273,15 +2341,35 @@ snapshots:
 
   seemly@0.3.10: {}
 
+  serialize-javascript@6.0.2:
+    dependencies:
+      randombytes: 2.1.0
+
   sirv@3.0.0:
     dependencies:
       '@polka/url': 1.0.0-next.28
       mrmime: 2.0.0
       totalist: 3.0.1
 
+  smob@1.5.0: {}
+
   source-map-js@1.2.1: {}
 
+  source-map-support@0.5.21:
+    dependencies:
+      buffer-from: 1.1.2
+      source-map: 0.6.1
+
+  source-map@0.6.1: {}
+
   supports-preserve-symlinks-flag@1.0.0: {}
+
+  terser@5.39.0:
+    dependencies:
+      '@jridgewell/source-map': 0.3.6
+      acorn: 8.14.0
+      commander: 2.20.3
+      source-map-support: 0.5.21
 
   tinyexec@0.3.2: {}
 
@@ -2315,9 +2403,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  unocss@65.4.3(postcss@8.5.1)(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13):
+  unocss@65.4.3(postcss@8.5.1)(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13):
     dependencies:
-      '@unocss/astro': 65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)
+      '@unocss/astro': 65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)
       '@unocss/cli': 65.4.3(rollup@4.34.8)
       '@unocss/core': 65.4.3
       '@unocss/postcss': 65.4.3(postcss@8.5.1)
@@ -2333,9 +2421,9 @@ snapshots:
       '@unocss/transformer-compile-class': 65.4.3
       '@unocss/transformer-directives': 65.4.3
       '@unocss/transformer-variant-group': 65.4.3
-      '@unocss/vite': 65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2))(vue@3.5.13)
+      '@unocss/vite': 65.4.3(rollup@4.34.8)(vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2))(vue@3.5.13)
     optionalDependencies:
-      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2)
+      vite: 6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2)
     transitivePeerDependencies:
       - postcss
       - rollup
@@ -2347,7 +2435,7 @@ snapshots:
       evtd: 0.2.4
       vue: 3.5.13
 
-  vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(tsx@4.19.2):
+  vite@6.0.11(jiti@2.4.2)(sass@1.84.0)(terser@5.39.0)(tsx@4.19.2):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.5.1
@@ -2356,6 +2444,7 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.4.2
       sass: 1.84.0
+      terser: 5.39.0
       tsx: 4.19.2
 
   vooks@0.2.12(vue@3.5.13):
