@@ -1,0 +1,28 @@
+{
+  "name": "@wtsml/doodle",
+  "version": "1.0.0",
+  "main": "doodle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WT-SML/doodle.git"
+  },
+  "keywords": [
+    "deepzoom",
+    "openseadragon",
+    "label",
+    "annotation"
+  ],
+  "author": "xingtu",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/WT-SML/doodle/issues"
+  },
+  "homepage": "https://github.com/WT-SML/doodle#readme",
+  "description": "一个高性能的 deepzoom 绘图标注插件。它可以轻松实现数十万可交互图形的同屏渲染。",
+  "publishConfig": {
+    "access": "public"
+  }
+}

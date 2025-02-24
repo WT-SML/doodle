@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build-doodle": "rollup -c"
+    "build-doodle": "rollup -c",
+    "publish": "copy README.md doodle-dist\\ /Y && cd doodle-dist && npm publish"
   },
   "dependencies": {
     "@unocss/reset": "^65.4.3",
