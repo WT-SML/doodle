@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "build-doodle": "rollup -c",
-    "publish": "copy README.md doodle-dist\\ /Y && cd doodle-dist && npm publish"
+    "publish": "copy README.md doodle-dist\\ /Y && cd doodle-dist && npm publish",
+    "patch": "cd doodle-dist && npm version patch",
+    "login": "cd doodle-dist && npm login"
   },
   "dependencies": {
     "@unocss/reset": "^65.4.3",
