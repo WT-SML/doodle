@@ -42,7 +42,7 @@ const state = reactive({
 // 初始化osd
 const initOSD = () => {
   const tileSources =
-    "http://openseadragon.github.io/example-images/duomo/duomo.dzi"
+    "https://openseadragon.github.io/example-images/duomo/duomo.dzi"
   const osdConf = {
     ..._.cloneDeep(defaultOsdConf),
     element: osdRef.value,
