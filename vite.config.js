@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from "node:url"
 import UnoCSS from "unocss/vite"
 
 export default defineConfig({
+  base: "/doodle/",
   plugins: [vue(), UnoCSS()],
   resolve: {
     alias: {
