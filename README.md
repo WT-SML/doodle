@@ -2,6 +2,10 @@
 
 Doodle 是一个高性能的 deepzoom 绘图标注插件。它可以轻松实现数十万可交互图形的同屏渲染。
 
+### 在线体验
+
+Demo 地址：[https://wt-sml.github.io/doodle/](https://wt-sml.github.io/doodle/)
+
 ### 安装
 
 ```bash
