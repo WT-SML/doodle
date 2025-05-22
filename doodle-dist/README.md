@@ -2,6 +2,10 @@
 
 Doodle 是一个高性能的 deepzoom 绘图标注插件。它可以轻松实现数十万可交互图形的同屏渲染。
 
+### 在线体验
+
+Demo 地址：[https://wt-sml.github.io/doodle/](https://wt-sml.github.io/doodle/)
+
 ### 安装
 
 ```bash
@@ -25,10 +29,13 @@ const doodle = createDoodle({
   onUpdate: (shape) => {
     doodle.updateShape(shape)
   },
+  onSelect: (shape) => {
+    console.log("选中了shape", shape)
+  },
 })
 
 // 添加图形
-doodle.addShapes(shapes)
+doodle.addShapes(shapes) // shape的数据结构参考后面 “shape对象结构示例部分”
 ```
 
 ### 属性
@@ -69,6 +76,13 @@ doodle.addShapes(shapes)
 - getShapes
 - setDefaultColor
 - setBrushColor
+
+### 事件
+
+- onAdd
+- onRemove
+- onUpdate
+- onSelect
 
 ### shape 对象结构示例
 
@@ -174,4 +188,4 @@ export const defaultShapes = [
 
 ### 贡献
 
-- [星图](https://github.com/WT-SML)
+- [红叶](https://github.com/WT-SML)
