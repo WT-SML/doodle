@@ -62191,11 +62191,15 @@ const render = (doodle) => {
     p.x = viewport._containerInnerSize.x - p.x;
   }
   const scale = doodle.getScale();
+  let rotation = (Math.PI * viewport.getRotation(true)) / 180;
+  if (rotation < 0) rotation += 2 * Math.PI;
+  if (rotation > 2 * Math.PI) rotation -= 2 * Math.PI;
   doodle.scale = scale;
   doodle.translate = p;
   doodle.pixiApp.stage.x = p.x;
   doodle.pixiApp.stage.y = p.y;
   doodle.pixiApp.stage.scale = scale;
+  doodle.pixiApp.stage.rotation = rotation;
   // 更新非点图形
   drawShapes(doodle);
   // Mesh
@@ -62203,6 +62207,7 @@ const render = (doodle) => {
 };
 // 更新点的Mesh
 const updatePointMesh = (doodle) => {
+  if (!doodle.pointMesh) return
   const scale = doodle.scale;
   doodle.pointMesh.scale = 1 / scale;
   const instancePositionBuffer =
@@ -80044,6 +80049,62 @@ const getHoverAnchor = (doodle) => {
   return null
 };
 
+const byteToHex = [];
+for (let i = 0; i < 256; ++i) {
+    byteToHex.push((i + 0x100).toString(16).slice(1));
+}
+function unsafeStringify(arr, offset = 0) {
+    return (byteToHex[arr[offset + 0]] +
+        byteToHex[arr[offset + 1]] +
+        byteToHex[arr[offset + 2]] +
+        byteToHex[arr[offset + 3]] +
+        '-' +
+        byteToHex[arr[offset + 4]] +
+        byteToHex[arr[offset + 5]] +
+        '-' +
+        byteToHex[arr[offset + 6]] +
+        byteToHex[arr[offset + 7]] +
+        '-' +
+        byteToHex[arr[offset + 8]] +
+        byteToHex[arr[offset + 9]] +
+        '-' +
+        byteToHex[arr[offset + 10]] +
+        byteToHex[arr[offset + 11]] +
+        byteToHex[arr[offset + 12]] +
+        byteToHex[arr[offset + 13]] +
+        byteToHex[arr[offset + 14]] +
+        byteToHex[arr[offset + 15]]).toLowerCase();
+}
+
+let getRandomValues;
+const rnds8 = new Uint8Array(16);
+function rng() {
+    if (!getRandomValues) {
+        if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+            throw new Error('crypto.getRandomValues() not supported. See https://github.com/uuidjs/uuid#getrandomvalues-not-supported');
+        }
+        getRandomValues = crypto.getRandomValues.bind(crypto);
+    }
+    return getRandomValues(rnds8);
+}
+
+const randomUUID = typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID.bind(crypto);
+var native = { randomUUID };
+
+function v4(options, buf, offset) {
+    if (native.randomUUID && true && !options) {
+        return native.randomUUID();
+    }
+    options = options || {};
+    const rnds = options.random ?? options.rng?.() ?? rng();
+    if (rnds.length < 16) {
+        throw new Error('Random bytes length must be >= 16');
+    }
+    rnds[6] = (rnds[6] & 0x0f) | 0x40;
+    rnds[8] = (rnds[8] & 0x3f) | 0x80;
+    return unsafeStringify(rnds);
+}
+
 // 鼠标按下
 const handleMouseDown = (doodle) => {
   getMouseHandler(doodle).handleMouseDown();
@@ -80125,12 +80186,15 @@ const getMouseHandler = (doodle) => {
                   JSON.stringify(originalShape) !==
                   JSON.stringify(doodle.tempShape)
                 ) {
-                  doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape));
+                  doodle.conf.onUpdate &&
+                    doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape));
                 }
                 doodle.tempShape = _.cloneDeep(doodle.hoverShape);
                 if (doodle.tempShape.type === doodle.tools.point) {
                   doodle.generatePoints();
                 }
+                doodle.conf.onSelect &&
+                  doodle.conf.onSelect(_.cloneDeep(doodle.tempShape));
               }
               // 当前没有编辑中的形状
             } else {
@@ -80138,6 +80202,8 @@ const getMouseHandler = (doodle) => {
               if (doodle.tempShape.type === doodle.tools.point) {
                 doodle.generatePoints();
               }
+              doodle.conf.onSelect &&
+                doodle.conf.onSelect(_.cloneDeep(doodle.tempShape));
             }
             return
           }
@@ -80150,7 +80216,8 @@ const getMouseHandler = (doodle) => {
             if (
               JSON.stringify(originalShape) !== JSON.stringify(doodle.tempShape)
             ) {
-              doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape));
+              doodle.conf.onUpdate &&
+                doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape));
             }
             doodle.tempShape = null;
             if (originalShape.type === doodle.tools.point) {
@@ -80477,8 +80544,8 @@ const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp;
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80535,8 +80602,8 @@ const getMouseHandler = (doodle) => {
         const completeShape = () => {
           doodle.tempShape.pos.pop();
           doodle.tempShape.pos.pop();
-          doodle.tempShape.id = window.crypto.randomUUID();
-          doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+          doodle.tempShape.id = v4();
+          doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
           doodle.tempShape = null;
         };
         const addPoint = () => {
@@ -80629,8 +80696,8 @@ const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp;
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80694,8 +80761,8 @@ const getMouseHandler = (doodle) => {
           return
         }
         delete doodle.tempShape.temp;
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80746,8 +80813,8 @@ const getMouseHandler = (doodle) => {
           doodle.tempShape = null;
           return
         }
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80782,8 +80849,8 @@ const getMouseHandler = (doodle) => {
           doodle.tempShape = null;
           return
         }
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd & doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80826,8 +80893,8 @@ const getMouseHandler = (doodle) => {
           doodle.tempShape = null;
           return
         }
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80870,8 +80937,8 @@ const getMouseHandler = (doodle) => {
           doodle.tempShape = null;
           return
         }
-        doodle.tempShape.id = window.crypto.randomUUID();
-        doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
+        doodle.tempShape.id = v4();
+        doodle.conf.onAdd && doodle.conf.onAdd(_.cloneDeep(doodle.tempShape));
         doodle.tempShape = null;
       },
       // 移动
@@ -80887,12 +80954,13 @@ const getMouseHandler = (doodle) => {
     [doodle.tools.point]: {
       // 按下
       handleMouseDown: () => {
-        doodle.conf.onAdd({
-          id: window.crypto.randomUUID(),
-          type: doodle.tools.point,
-          pos: [doodle.mouse.dx, doodle.mouse.dy],
-          color: doodle.brushColor,
-        });
+        doodle.conf.onAdd &&
+          doodle.conf.onAdd({
+            id: v4(),
+            type: doodle.tools.point,
+            pos: [doodle.mouse.dx, doodle.mouse.dy],
+            color: doodle.brushColor,
+          });
       },
       // 抬起
       handleMouseUp: () => {},
@@ -83738,7 +83806,6 @@ class Doodle {
   graphics // pixi graphics
   pointMesh // 点的Mesh
   points = [] // 点集合
-  tracker // 鼠标跟踪器
   mode = this.tools.move // 模式
   viewer // osd的画布
   shapes = [] // 形状数组
@@ -83790,6 +83857,7 @@ class Doodle {
   }
   // 清空标注
   clear() {
+    this.tempShape = null;
     this.shapes = [];
     this.anchors = [];
     this.bounds.clear();
@@ -83799,60 +83867,67 @@ class Doodle {
   createBounds() {
     this.bounds = new RBush();
   }
+  // 移动处理器
+  moveHandler = (e) => {
+    if (e.position) {
+      this.mouse.x = e.position.x;
+      this.mouse.y = e.position.y;
+    } else {
+      this.mouse.x = e.offsetX;
+      this.mouse.y = e.offsetY;
+    }
+    const viewportPoint = this.viewer.viewport.pointFromPixel(
+      new osd.Point(this.mouse.x, this.mouse.y),
+      true
+    );
+    const dp = this.viewer.viewport.viewer.world
+      .getItemAt(0)
+      .viewportToImageCoordinates(viewportPoint.x, viewportPoint.y, true);
+    this.mouse.dx = dp.x;
+    this.mouse.dy = dp.y;
+    handleMouseMove(this);
+    // 悬浮的shape
+    this.hoverShape = getHoverShape(this);
+    // 悬浮的锚点
+    this.hoverAnchor = getHoverAnchor(this);
+    // 计算锚点
+    generateAnchors(this);
+    // 更新鼠标样式
+    this.updateCursor();
+  }
+  // 按下处理器
+  pressHandler = () => {
+    this.mouse.isPressed = true;
+    handleMouseDown(this);
+    // 计算锚点
+    generateAnchors(this);
+    // 更新鼠标样式
+    this.updateCursor();
+  }
+  // 释放处理器
+  releaseHandler = () => {
+    this.mouse.isPressed = false;
+    handleMouseUp(this);
+    // 计算锚点
+    generateAnchors(this);
+    // 更新鼠标样式
+    this.updateCursor();
+  }
   // 创建鼠标跟踪器
   createMouseTracker() {
-    // 创建一个鼠标跟踪器
-    const tracker = new osd.MouseTracker({
-      element: this.pixiApp.canvas,
-      pressHandler: (e) => {
-        this.mouse.isPressed = true;
-        handleMouseDown(this);
-        // 计算锚点
-        generateAnchors(this);
-        // 更新鼠标样式
-        this.updateCursor();
-      },
-      releaseHandler: (e) => {
-        this.mouse.isPressed = false;
-        handleMouseUp(this);
-        // 计算锚点
-        generateAnchors(this);
-        // 更新鼠标样式
-        this.updateCursor();
-      },
-      moveHandler: (e) => {
-        // @ts-ignore
-        this.mouse.x = e.position.x;
-        // @ts-ignore
-        this.mouse.y = e.position.y;
-        const viewportPoint = this.viewer.viewport.pointFromPixel(
-          new osd.Point(this.mouse.x, this.mouse.y),
-          true
-        );
-        const dp = this.viewer.viewport.viewer.world
-          .getItemAt(0)
-          .viewportToImageCoordinates(viewportPoint.x, viewportPoint.y, true);
-        this.mouse.dx = dp.x;
-        this.mouse.dy = dp.y;
-        handleMouseMove(this);
-        // 悬浮的shape
-        this.hoverShape = getHoverShape(this);
-        // 悬浮的锚点
-        this.hoverAnchor = getHoverAnchor(this);
-        // 计算锚点
-        generateAnchors(this);
-        // 更新鼠标样式
-        this.updateCursor();
-      },
-    });
-    // 启用鼠标跟踪器
-    tracker.setTracking(true);
-    this.tracker = tracker;
+    this.viewer.canvas.addEventListener("mousemove", this.moveHandler);
+    this.viewer.addHandler("canvas-drag", this.moveHandler);
+    this.viewer.addHandler("canvas-press", this.pressHandler);
+    this.viewer.addHandler("canvas-release", this.releaseHandler);
   }
   // 设置模式
   setMode(mode) {
     this.mode = mode;
     this.setPan(mode === this.tools.move);
+    if (mode !== this.tools.move) {
+      this.tempShape = null;
+      this.anchors = [];
+    }
   }
   // 设置允许拖动
   setPan(pan) {
@@ -83861,7 +83936,10 @@ class Doodle {
   }
   // 销毁
   destroy() {
-    this.tracker.setTracking(false);
+    this.viewer.canvas.removeEventListener("mousemove", this.moveHandler);
+    this.viewer.removeHandler("canvas-drag", this.moveHandler);
+    this.viewer.removeHandler("canvas-press", this.pressHandler);
+    this.viewer.removeHandler("canvas-release", this.releaseHandler);
     this.pixiApp.canvas.remove();
     this.pixiApp.destroy();
   }
@@ -83889,9 +83967,13 @@ class Doodle {
       // @ts-ignore
       (item) => item.type === this.tools.point && item.id !== this.tempShape?.id
     );
-    this.pixiApp.stage.removeChild(this.pointMesh);
+    if (this.pointMesh) {
+      this.pixiApp.stage.removeChild(this.pointMesh);
+    }
     this.pointMesh = this.createPointMesh(this.points);
-    this.pixiApp.stage.addChild(this.pointMesh);
+    if (this.pointMesh) {
+      this.pixiApp.stage.addChild(this.pointMesh);
+    }
   }
   // 添加图形（批量）
   addShapes(shapes) {
@@ -84039,11 +84121,14 @@ class Doodle {
         cursor = "pointer";
       }
     }
-    this.pixiApp.canvas.style.cursor = cursor;
+    this.viewer.canvas.style.cursor = cursor;
   }
   // 创建点Mesh
   createPointMesh(points) {
     const length = points.length;
+    if (!length) {
+      return null
+    }
     const instancePositionBuffer = new Buffer({
       data: new Float32Array(length * 2),
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,

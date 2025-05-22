@@ -10,11 +10,15 @@ export const render = (doodle) => {
     p.x = viewport._containerInnerSize.x - p.x
   }
   const scale = doodle.getScale()
+  let rotation = (Math.PI * viewport.getRotation(true)) / 180
+  if (rotation < 0) rotation += 2 * Math.PI
+  if (rotation > 2 * Math.PI) rotation -= 2 * Math.PI
   doodle.scale = scale
   doodle.translate = p
   doodle.pixiApp.stage.x = p.x
   doodle.pixiApp.stage.y = p.y
   doodle.pixiApp.stage.scale = scale
+  doodle.pixiApp.stage.rotation = rotation
   // 更新非点图形
   drawShapes(doodle)
   // Mesh
@@ -22,6 +26,7 @@ export const render = (doodle) => {
 }
 // 更新点的Mesh
 export const updatePointMesh = (doodle) => {
+  if (!doodle.pointMesh) return
   const scale = doodle.scale
   doodle.pointMesh.scale = 1 / scale
   const instancePositionBuffer =

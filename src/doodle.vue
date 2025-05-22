@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref, reactive, computed, markRaw } from "vue"
+// import { createDoodle } from "../doodle-dist/doodle.min.js"
 import { createDoodle } from "../doodle/main.js"
 import { randomPoints, randomRects } from "~/tools"
 import { defaultShapes } from "~/tools/default-shapes"
@@ -37,6 +38,7 @@ const state = reactive({
   doodle: null, // 避免涂鸦对象被vue代理产生性能问题
   mode: null, // 模式
   brushColor: null, // 画笔颜色
+  rotationAngle: 0, //旋转角度
 })
 
 // 初始化osd
@@ -63,6 +65,9 @@ const initDoodle = () => {
     },
     onUpdate: (shape) => {
       doodle.updateShape(shape)
+    },
+    onSelect: (shape) => {
+      console.log("选中了shape", shape)
     },
   })
   state.doodle = markRaw(doodle)
@@ -117,8 +122,13 @@ const copyAllShapes = async () => {
     await navigator.clipboard.writeText(shapesString)
     message.success("已复制！")
   } catch (err) {
-    message.error("复制失败！")
+    message.error("复制失败！请检查剪切板权限！")
   }
+}
+// 旋转
+const rotation = (angle) => {
+  state.rotationAngle += angle
+  state.viewer.viewport.setRotation(state.rotationAngle)
 }
 
 onMounted(() => {
@@ -198,6 +208,8 @@ onMounted(() => {
             <n-button size="tiny" @click="random10000Rects()">
               生成1000个矩形标注
             </n-button>
+            <n-button size="tiny" @click="rotation(-5)"> 向左旋转 </n-button>
+            <n-button size="tiny" @click="rotation(5)"> 向右旋转 </n-button>
             <n-button size="tiny" @click="copyAllShapes()">
               复制所有标注信息
             </n-button>

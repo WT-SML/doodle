@@ -29,10 +29,13 @@ const doodle = createDoodle({
   onUpdate: (shape) => {
     doodle.updateShape(shape)
   },
+  onSelect: (shape) => {
+    console.log("选中了shape", shape)
+  },
 })
 
 // 添加图形
-doodle.addShapes(shapes)
+doodle.addShapes(shapes) // shape的数据结构参考后面 “shape对象结构示例部分”
 ```
 
 ### 属性
@@ -73,6 +76,13 @@ doodle.addShapes(shapes)
 - getShapes
 - setDefaultColor
 - setBrushColor
+
+### 事件
+
+- onAdd
+- onRemove
+- onUpdate
+- onSelect
 
 ### shape 对象结构示例
 
@@ -178,4 +188,4 @@ export const defaultShapes = [
 
 ### 贡献
 
-- [星图](https://github.com/WT-SML)
+- [红叶](https://github.com/WT-SML)

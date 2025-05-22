@@ -44,7 +44,6 @@ export class Doodle {
   graphics // pixi graphics
   pointMesh // 点的Mesh
   points = [] // 点集合
-  tracker // 鼠标跟踪器
   mode = this.tools.move // 模式
   viewer // osd的画布
   shapes = [] // 形状数组
@@ -96,6 +95,7 @@ export class Doodle {
   }
   // 清空标注
   clear() {
+    this.tempShape = null
     this.shapes = []
     this.anchors = []
     this.bounds.clear()
@@ -105,60 +105,67 @@ export class Doodle {
   createBounds() {
     this.bounds = new RBush()
   }
+  // 移动处理器
+  moveHandler = (e) => {
+    if (e.position) {
+      this.mouse.x = e.position.x
+      this.mouse.y = e.position.y
+    } else {
+      this.mouse.x = e.offsetX
+      this.mouse.y = e.offsetY
+    }
+    const viewportPoint = this.viewer.viewport.pointFromPixel(
+      new osd.Point(this.mouse.x, this.mouse.y),
+      true
+    )
+    const dp = this.viewer.viewport.viewer.world
+      .getItemAt(0)
+      .viewportToImageCoordinates(viewportPoint.x, viewportPoint.y, true)
+    this.mouse.dx = dp.x
+    this.mouse.dy = dp.y
+    handleMouseMove(this)
+    // 悬浮的shape
+    this.hoverShape = getHoverShape(this)
+    // 悬浮的锚点
+    this.hoverAnchor = getHoverAnchor(this)
+    // 计算锚点
+    generateAnchors(this)
+    // 更新鼠标样式
+    this.updateCursor()
+  }
+  // 按下处理器
+  pressHandler = () => {
+    this.mouse.isPressed = true
+    handleMouseDown(this)
+    // 计算锚点
+    generateAnchors(this)
+    // 更新鼠标样式
+    this.updateCursor()
+  }
+  // 释放处理器
+  releaseHandler = () => {
+    this.mouse.isPressed = false
+    handleMouseUp(this)
+    // 计算锚点
+    generateAnchors(this)
+    // 更新鼠标样式
+    this.updateCursor()
+  }
   // 创建鼠标跟踪器
   createMouseTracker() {
-    // 创建一个鼠标跟踪器
-    const tracker = new osd.MouseTracker({
-      element: this.pixiApp.canvas,
-      pressHandler: (e) => {
-        this.mouse.isPressed = true
-        handleMouseDown(this)
-        // 计算锚点
-        generateAnchors(this)
-        // 更新鼠标样式
-        this.updateCursor()
-      },
-      releaseHandler: (e) => {
-        this.mouse.isPressed = false
-        handleMouseUp(this)
-        // 计算锚点
-        generateAnchors(this)
-        // 更新鼠标样式
-        this.updateCursor()
-      },
-      moveHandler: (e) => {
-        // @ts-ignore
-        this.mouse.x = e.position.x
-        // @ts-ignore
-        this.mouse.y = e.position.y
-        const viewportPoint = this.viewer.viewport.pointFromPixel(
-          new osd.Point(this.mouse.x, this.mouse.y),
-          true
-        )
-        const dp = this.viewer.viewport.viewer.world
-          .getItemAt(0)
-          .viewportToImageCoordinates(viewportPoint.x, viewportPoint.y, true)
-        this.mouse.dx = dp.x
-        this.mouse.dy = dp.y
-        handleMouseMove(this)
-        // 悬浮的shape
-        this.hoverShape = getHoverShape(this)
-        // 悬浮的锚点
-        this.hoverAnchor = getHoverAnchor(this)
-        // 计算锚点
-        generateAnchors(this)
-        // 更新鼠标样式
-        this.updateCursor()
-      },
-    })
-    // 启用鼠标跟踪器
-    tracker.setTracking(true)
-    this.tracker = tracker
+    this.viewer.canvas.addEventListener("mousemove", this.moveHandler)
+    this.viewer.addHandler("canvas-drag", this.moveHandler)
+    this.viewer.addHandler("canvas-press", this.pressHandler)
+    this.viewer.addHandler("canvas-release", this.releaseHandler)
   }
   // 设置模式
   setMode(mode) {
     this.mode = mode
     this.setPan(mode === this.tools.move)
+    if (mode !== this.tools.move) {
+      this.tempShape = null
+      this.anchors = []
+    }
   }
   // 设置允许拖动
   setPan(pan) {
@@ -167,7 +174,10 @@ export class Doodle {
   }
   // 销毁
   destroy() {
-    this.tracker.setTracking(false)
+    this.viewer.canvas.removeEventListener("mousemove", this.moveHandler)
+    this.viewer.removeHandler("canvas-drag", this.moveHandler)
+    this.viewer.removeHandler("canvas-press", this.pressHandler)
+    this.viewer.removeHandler("canvas-release", this.releaseHandler)
     this.pixiApp.canvas.remove()
     this.pixiApp.destroy()
   }
@@ -197,9 +207,13 @@ export class Doodle {
       // @ts-ignore
       (item) => item.type === this.tools.point && item.id !== this.tempShape?.id
     )
-    this.pixiApp.stage.removeChild(this.pointMesh)
+    if (this.pointMesh) {
+      this.pixiApp.stage.removeChild(this.pointMesh)
+    }
     this.pointMesh = this.createPointMesh(this.points)
-    this.pixiApp.stage.addChild(this.pointMesh)
+    if (this.pointMesh) {
+      this.pixiApp.stage.addChild(this.pointMesh)
+    }
   }
   // 添加图形（批量）
   addShapes(shapes) {
@@ -347,11 +361,14 @@ export class Doodle {
         cursor = "pointer"
       }
     }
-    this.pixiApp.canvas.style.cursor = cursor
+    this.viewer.canvas.style.cursor = cursor
   }
   // 创建点Mesh
   createPointMesh(points) {
     const length = points.length
+    if (!length) {
+      return null
+    }
     const instancePositionBuffer = new Buffer({
       data: new Float32Array(length * 2),
       usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,

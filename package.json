@@ -20,6 +20,7 @@
     "openseadragon": "^5.0.1",
     "pixi.js": "^8.6.6",
     "rbush": "^4.0.1",
+    "uuid": "^11.1.0",
     "vue": "^3.5.13"
   },
   "devDependencies": {

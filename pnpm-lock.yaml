@@ -29,6 +29,9 @@ importers:
       rbush:
         specifier: ^4.0.1
         version: 4.0.1
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
       vue:
         specifier: ^3.5.13
         version: 3.5.13
@@ -1235,6 +1238,10 @@ packages:
       vite:
         optional: true
 
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+
   vdirs@0.1.8:
     resolution: {integrity: sha512-H9V1zGRLQZg9b+GdMk8MXDN2Lva0zx72MPahDKc30v+DtwKjfyOSXWRIX4t2mhDubM1H09gPhWeth/BJWPHGUw==}
     peerDependencies:
@@ -2429,6 +2436,8 @@ snapshots:
       - rollup
       - supports-color
       - vue
+
+  uuid@11.1.0: {}
 
   vdirs@0.1.8(vue@3.5.13):
     dependencies:
