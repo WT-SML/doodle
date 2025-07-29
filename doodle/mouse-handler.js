@@ -111,15 +111,17 @@ export const getMouseHandler = (doodle) => {
             const originalShape = doodle.shapes.find(
               (item) => item.id === doodle.tempShape.id
             )
-            if (
-              JSON.stringify(originalShape) !== JSON.stringify(doodle.tempShape)
-            ) {
-              doodle.conf.onUpdate &&
-                doodle.conf.onUpdate(_.cloneDeep(doodle.tempShape))
-            }
+            const cloneTempShape = _.cloneDeep(doodle.tempShape)
+            // 修正临时shape的bounds位置
+            doodle.correctionTempShapeBounds(originalShape)
             doodle.tempShape = null
             if (originalShape.type === doodle.tools.point) {
               doodle.generatePoints()
+            }
+            if (
+              JSON.stringify(originalShape) !== JSON.stringify(doodle.tempShape)
+            ) {
+              doodle.conf.onUpdate && doodle.conf.onUpdate(cloneTempShape)
             }
           }
         } else {
@@ -310,17 +312,14 @@ export const getMouseHandler = (doodle) => {
               }
             },
           }
-          // 修正临时shape的位置
-          doodle.bounds.remove(getBounds(doodle.tempShape, doodle), (a, b) => {
-            return a.id === b.id
-          })
           anchorHandleMoveFuncMap[doodle.tempShape.type](
             doodle.tempShape,
             tempShape,
             tempAnchor,
             diff
           )
-          doodle.bounds.insert(getBounds(doodle.tempShape, doodle))
+          // 修正临时shape的bounds位置
+          doodle.correctionTempShapeBounds(doodle.tempShape)
           return
         }
         // 在编辑的shape上移动
@@ -395,16 +394,13 @@ export const getMouseHandler = (doodle) => {
               shape.pos[1] = cloneShape.pos[1] + diff.y
             },
           }
-          // 修正临时shape的位置
-          doodle.bounds.remove(getBounds(doodle.tempShape, doodle), (a, b) => {
-            return a.id === b.id
-          })
           shapeHandleMoveFuncMap[doodle.tempShape.type](
             doodle.tempShape,
             tempShape,
             diff
           )
-          doodle.bounds.insert(getBounds(doodle.tempShape, doodle))
+          // 修正临时shape的bounds位置
+          doodle.correctionTempShapeBounds(doodle.tempShape)
           return
         }
       },

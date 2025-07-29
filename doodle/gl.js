@@ -13,7 +13,7 @@ export const vertex = `
   void main() {
       mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
       gl_Position = vec4((mvp * vec3(aPosition + aPositionOffset, 1.0)).xy, 0.0, 1.0);
-      vColor = aColor; 
+      vColor = aColor;
   }
 `
 // 片元着色器

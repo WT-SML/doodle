@@ -39,6 +39,7 @@ const state = reactive({
   mode: null, // 模式
   brushColor: null, // 画笔颜色
   rotationAngle: 0, //旋转角度
+  readonly: false, //只读模式
 })
 
 // 初始化osd
@@ -56,25 +57,32 @@ const initOSD = () => {
 // 初始化标注插件
 const initDoodle = () => {
   const doodle = createDoodle({
-    viewer: state.viewer,
+    viewer: state.viewer, // openseadragon viewer
+    // 监听添加 shape 事件
     onAdd: (shape) => {
       doodle.addShape(shape)
     },
+    // 监听删除 shape 事件
     onRemove: (shape) => {
       doodle.removeShape(shape)
     },
+    // 监听更新 shape 事件
     onUpdate: (shape) => {
       doodle.updateShape(shape)
     },
+    // 监听选中 shape 事件
     onSelect: (shape) => {
       console.log("选中了shape", shape)
     },
   })
+  // markRaw防止vue代理产生性能问题
   state.doodle = markRaw(doodle)
   // 初始化模式
   state.mode = doodle.mode
   // 初始化画笔颜色
   state.brushColor = doodle.brushColor
+  // 初始化只读模式
+  state.readonly = doodle.readonly
 }
 // 销毁
 const destroy = () => {
@@ -129,6 +137,18 @@ const copyAllShapes = async () => {
 const rotation = (angle) => {
   state.rotationAngle += angle
   state.viewer.viewport.setRotation(state.rotationAngle)
+}
+// 设置只读模式
+const setReadOnly = (v) => {
+  state.readonly = v
+  state.doodle.setReadOnly(v)
+  state.mode = state.doodle.tools.move
+}
+// 移动视野至第一个shape
+const moveToFirstShape = () => {
+  const firstShape = state.doodle.shapes[0]
+  if (!firstShape) return
+  state.doodle.moveToShape(firstShape)
 }
 
 onMounted(() => {
@@ -195,7 +215,7 @@ onMounted(() => {
           />
         </div>
         <div class="mb-2">测试按钮：</div>
-        <div class="pl-5 flex flex-col gap-y-10px">
+        <div class="pl-5 flex flex-col gap-y-10px mb-3">
           <n-button v-if="!state.doodle" size="tiny" @click="init()">
             创建Doodle实例
           </n-button>
@@ -210,10 +230,22 @@ onMounted(() => {
             </n-button>
             <n-button size="tiny" @click="rotation(-5)"> 向左旋转 </n-button>
             <n-button size="tiny" @click="rotation(5)"> 向右旋转 </n-button>
+            <n-button size="tiny" @click="moveToFirstShape()">
+              移动视野至第一个shape
+            </n-button>
             <n-button size="tiny" @click="copyAllShapes()">
               复制所有标注信息
             </n-button>
           </template>
+        </div>
+        <div class="mb-2">测试开关：</div>
+        <div class="pl-5 flex flex-col gap-y-10px">
+          <div v-if="state.doodle">
+            <div class="flex">
+              只读模式：
+              <n-switch :value="state.readonly" @update:value="setReadOnly" />
+            </div>
+          </div>
         </div>
       </div>
       <!-- 画布 -->

@@ -23,7 +23,7 @@ import { fragment, vertex } from "./gl"
 import { generateCircleGeometry, hexToRGB } from "./tool"
 
 export class Doodle {
-  // 工具列表
+  // 绘图工具列表
   tools = {
     move: "move", // 移动
     rect: "rect", // 矩形
@@ -64,6 +64,7 @@ export class Doodle {
   tempShape = null // 临时shape（新增和编辑时）
   hoverShape = null // 悬浮的shape
   hoverAnchor = null // 悬浮的锚点
+  readonly = false // 只读模式
   // 鼠标
   mouse = {
     x: 0, // 视口x
@@ -107,6 +108,7 @@ export class Doodle {
   }
   // 移动处理器
   moveHandler = (e) => {
+    if (this.readonly) return
     if (e.position) {
       this.mouse.x = e.position.x
       this.mouse.y = e.position.y
@@ -135,6 +137,7 @@ export class Doodle {
   }
   // 按下处理器
   pressHandler = () => {
+    if (this.readonly) return
     this.mouse.isPressed = true
     handleMouseDown(this)
     // 计算锚点
@@ -144,6 +147,7 @@ export class Doodle {
   }
   // 释放处理器
   releaseHandler = () => {
+    if (this.readonly) return
     this.mouse.isPressed = false
     handleMouseUp(this)
     // 计算锚点
@@ -162,10 +166,7 @@ export class Doodle {
   setMode(mode) {
     this.mode = mode
     this.setPan(mode === this.tools.move)
-    if (mode !== this.tools.move) {
-      this.tempShape = null
-      this.anchors = []
-    }
+    this.resetTempShape()
   }
   // 设置允许拖动
   setPan(pan) {
@@ -184,6 +185,7 @@ export class Doodle {
   // 监听键盘
   listenKeyboard() {
     onKeyStroke(["Delete"], async (e) => {
+      if (this.readonly) return
       switch (e.code) {
         case "Delete":
           // @ts-ignore
@@ -202,6 +204,7 @@ export class Doodle {
       render(this)
     })
   }
+  // 生成点
   generatePoints() {
     this.points = this.shapes.filter(
       // @ts-ignore
@@ -265,8 +268,10 @@ export class Doodle {
     if (shape.id === this.tempShape?.id) {
       this.tempShape = null
     }
+    // 计算锚点
+    generateAnchors(this)
   }
-  // 更新图形
+  // 更新图形（批量）
   updateShapes(shapes) {
     this.removeShapes(shapes)
     this.addShapes(shapes)
@@ -276,7 +281,7 @@ export class Doodle {
     this.removeShape(shape)
     this.addShape(shape)
   }
-  // 更新图形
+  // 选择图形
   selectShape(shape) {
     this.tempShape = _.cloneDeep(shape)
     // 计算锚点
@@ -338,6 +343,10 @@ export class Doodle {
   // 更新鼠标样式
   updateCursor() {
     let cursor = "default"
+    if (this.readonly) {
+      this.viewer.canvas.style.cursor = cursor
+      return
+    }
     if (this.mode !== this.tools.move) {
       // 绘制中，使用十字线
       cursor = "crosshair"
@@ -413,5 +422,53 @@ export class Doodle {
       shader,
     })
     return pointMesh
+  }
+  // 修正临时shape的bounds位置
+  correctionTempShapeBounds = (shape) => {
+    this.bounds.remove(getBounds(shape, this), (a, b) => {
+      return a.id === b.id
+    })
+    this.bounds.insert(getBounds(shape, this))
+  }
+  // 设置只读模式
+  setReadOnly = (readonly) => {
+    this.readonly = readonly
+    if (this.readonly) {
+      this.setMode(this.tools.move)
+    }
+    // 更新鼠标样式
+    this.updateCursor()
+  }
+  // 重置tempshape
+  resetTempShape() {
+    // 如果有临时shape则触发编辑保存
+    const originalShape = this.shapes.find(
+      // @ts-ignore
+      (item) => item.id === this.tempShape?.id
+    )
+    if (originalShape) {
+      // 修正临时shape的bounds位置
+      this.correctionTempShapeBounds(originalShape)
+    }
+    this.tempShape = null
+    this.anchors = []
+  }
+  // 获取一个形状的中心点
+  getShapeCenter(shape) {
+    const { maxX, minX, maxY, minY } = getBounds(shape, this)
+    return {
+      x: (maxX + minX) / 2,
+      y: (maxY + minY) / 2,
+    }
+  }
+  // 移动视野到某个shape
+  moveToShape(shape = null, immediately = false) {
+    if (!shape) {
+      return
+    }
+    const viewport = this.viewer.viewport
+    const center = this.getShapeCenter(shape)
+    const osdPoint = viewport.imageToViewportCoordinates(center.x, center.y)
+    this.viewer.viewport.panTo(osdPoint, immediately)
   }
 }
