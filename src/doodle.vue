@@ -135,8 +135,10 @@ const copyAllShapes = async () => {
 }
 // 旋转
 const rotation = (angle) => {
-  state.rotationAngle += angle
-  state.viewer.viewport.setRotation(state.rotationAngle)
+  const viewport = state.viewer.viewport
+  const flipped = viewport.getFlip()
+  state.rotationAngle += flipped ? -angle : angle
+  viewport.setRotation(state.rotationAngle)
 }
 // 设置只读模式
 const setReadOnly = (v) => {
@@ -149,6 +151,12 @@ const moveToFirstShape = () => {
   const firstShape = state.doodle.shapes[0]
   if (!firstShape) return
   state.doodle.moveToShape(firstShape)
+}
+// 镜像反转
+const mirror = () => {
+  const viewport = state.viewer.viewport
+  const flip = viewport.getFlip()
+  viewport.setFlip(!flip)
 }
 
 onMounted(() => {
@@ -230,6 +238,7 @@ onMounted(() => {
             </n-button>
             <n-button size="tiny" @click="rotation(-5)"> 向左旋转 </n-button>
             <n-button size="tiny" @click="rotation(5)"> 向右旋转 </n-button>
+            <n-button size="tiny" @click="mirror()"> 镜像翻转 </n-button>
             <n-button size="tiny" @click="moveToFirstShape()">
               移动视野至第一个shape
             </n-button>

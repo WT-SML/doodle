@@ -109,20 +109,29 @@ export class Doodle {
   // 移动处理器
   moveHandler = (e) => {
     if (this.readonly) return
+    const viewport = this.viewer.viewport // osd 视口对象
+    let x, y
     if (e.position) {
-      this.mouse.x = e.position.x
-      this.mouse.y = e.position.y
+      x = e.position.x
+      y = e.position.y
     } else {
-      this.mouse.x = e.offsetX
-      this.mouse.y = e.offsetY
+      x = e.offsetX
+      y = e.offsetY
     }
-    const viewportPoint = this.viewer.viewport.pointFromPixel(
+    const flipped = viewport.getFlip() // 翻转
+    if (flipped) {
+      x = viewport._containerInnerSize.x - x
+    }
+    this.mouse.x = x
+    this.mouse.y = y
+    const viewportPoint = viewport.pointFromPixel(
       new osd.Point(this.mouse.x, this.mouse.y),
       true
     )
-    const dp = this.viewer.viewport.viewer.world
-      .getItemAt(0)
-      .viewportToImageCoordinates(viewportPoint.x, viewportPoint.y, true)
+    const dp = viewport._viewportToImageDelta(
+      viewportPoint.x - viewport._contentBoundsNoRotate.x,
+      viewportPoint.y - viewport._contentBoundsNoRotate.y
+    )
     this.mouse.dx = dp.x
     this.mouse.dy = dp.y
     handleMouseMove(this)
@@ -164,6 +173,7 @@ export class Doodle {
   }
   // 设置模式
   setMode(mode) {
+    if (this.readonly) mode = this.tools.move
     this.mode = mode
     this.setPan(mode === this.tools.move)
     this.resetTempShape()

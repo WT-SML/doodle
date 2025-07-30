@@ -3,21 +3,29 @@ import { lineAngle, pointRotate } from "geometric"
 
 // 渲染方法
 export const render = (doodle) => {
-  const viewport = doodle.viewer.viewport
-  const flipped = viewport.getFlip()
-  const p = viewport.pixelFromPoint(new osd.Point(0, 0), true)
-  if (flipped) {
-    p.x = viewport._containerInnerSize.x - p.x
-  }
-  const scale = doodle.getScale()
-  let rotation = (Math.PI * viewport.getRotation(true)) / 180
+  const viewport = doodle.viewer.viewport // osd 视口对象
+  const scale = doodle.getScale() // 缩放
+  const flipped = viewport.getFlip() // 翻转
+  const angle = viewport.getRotation(true) // 旋转角度
+  let rotation = angle * (Math.PI / 180) // 旋转弧度
+  // 归一化到 [0, 2π] 范围
   if (rotation < 0) rotation += 2 * Math.PI
   if (rotation > 2 * Math.PI) rotation -= 2 * Math.PI
+  // 旋转翻转
+  rotation = flipped ? -rotation : rotation
+  // 图像左上角原点相对于视口的偏移
+  const origin = viewport.pixelFromPoint(new osd.Point(0, 0), true)
+  if (flipped) {
+    origin.x = viewport._containerInnerSize.x - origin.x
+  }
+  const tx = origin.x // x轴平移
+  const ty = origin.y // y轴平移
   doodle.scale = scale
-  doodle.translate = p
-  doodle.pixiApp.stage.x = p.x
-  doodle.pixiApp.stage.y = p.y
-  doodle.pixiApp.stage.scale = scale
+  doodle.translate.x = tx
+  doodle.translate.y = ty
+  doodle.pixiApp.stage.x = tx
+  doodle.pixiApp.stage.y = ty
+  doodle.pixiApp.stage.scale.set(flipped ? -scale : scale, scale)
   doodle.pixiApp.stage.rotation = rotation
   // 更新非点图形
   drawShapes(doodle)

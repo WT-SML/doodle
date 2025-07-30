@@ -20,121 +20,356 @@ import { createDoodle } from "@wtsml/doodle"
 // 创建doodle实例
 const doodle = createDoodle({
   viewer, // openseadragon viewer
+  // 监听添加 shape 事件
   onAdd: (shape) => {
     doodle.addShape(shape)
   },
+  // 监听删除 shape 事件
   onRemove: (shape) => {
     doodle.removeShape(shape)
   },
+  // 监听更新 shape 事件
   onUpdate: (shape) => {
     doodle.updateShape(shape)
   },
+  // 监听选中 shape 事件
   onSelect: (shape) => {
     console.log("选中了shape", shape)
   },
 })
 
 // 添加图形
-doodle.addShapes(shapes) // shape的数据结构参考后面 “shape对象结构示例部分”
+doodle.addShapes(shapes) // shape的数据结构参考后面 “shape对象结构示例” 部分
 ```
 
 ### 属性
 
-- tools
-- conf
-- pixiApp
-- mode
-- viewer
-- shapes
-- bounds
-- scale
-- translate
-- strokeWidth
-- defaultColor
-- brushColor
-- hitRadius
-- anchorRadius
-- pointRadius
-- tempShape
-- hoverShape
-- mouse
+#### tools
+
+支持的绘图工具枚举。
+
+其默认值为：
+
+```js
+// 绘图工具列表
+tools = {
+  move: "move", // 移动
+  rect: "rect", // 矩形
+  polygon: "polygon", // 多边形
+  circle: "circle", // 圆
+  ellipse: "ellipse", // 椭圆
+  path: "path", // 路径
+  closed_path: "closed_path", // 闭合路径
+  line: "line", // 直线
+  arrow_line: "arrow_line", // 箭头直线
+  point: "point", // 点
+}
+```
+
+#### conf
+
+type : `object`
+
+使用 `createDoodle` 创建 doodle 实例时的入参。
+
+`conf` 里应该至少包含 `viewer` 参数，`viewer` 是 openseadragon 的画布实例。
+
+#### pixiApp
+
+type : `object`
+
+doodle 底层使用 pixi.js 实现，pixiApp 是 pixi 的实例。
+
+#### mode
+
+type : `string`
+
+doodle 当前所处的绘图模式，可以通过 `setMode` 方法切换绘图模式。
+
+#### viewer
+
+type : `object`
+
+openseadragon 的画布实例。
+
+#### shapes
+
+type : `object[]`
+
+shape 列表，所有绘制的图形都保存在这里。
+
+数据结构参考后面 “shape 对象结构示例” 部分。
+
+可以通过 `getShapes` API 获取它的克隆副本。
+
+#### bounds
+
+type : `object[]`
+
+所有 shape 的边界列表。doodle 为了更高的性能，为每个 shape 都保存了边界信息，方便后续的计算。
+
+数据结构为：
+
+```js
+{
+  minX: 0,
+  minY: 0,
+  maxX: 0,
+  maxY: 0,
+  id: null,
+}
+```
+
+#### scale
+
+type : `number`
+
+缩放信息。
+
+#### translate
+
+type : `object`
+
+平移信息。
+
+数据结构为：
+
+```js
+{
+  x: 0,
+  y: 0,
+}
+```
+
+#### strokeWidth
+
+type : `number`
+
+图形线宽。默认值为 2。
+
+#### defaultColor
+
+type : `string`
+
+图形默认颜色。默认值为 `#FF0000` 红色。可以通过 `setDefaultColor` API 修改。
+
+#### brushColor
+
+type : `string`
+
+画笔颜色。默认值为 `#FF0000` 红色。可以通过 `setBrushColor` API 修改。
+
+#### hitRadius
+
+type : `number`
+
+光标的碰撞检测半径。默认值为 5。
+
+#### anchorRadius
+
+type : `number`
+
+锚点半径。默认值为 5。
+
+#### pointRadius
+
+type : `number`
+
+点半径。默认值为 6。
+
+#### tempShape
+
+type : `object`
+
+临时 shape，新增和编辑图形时，临时创建的 shape 副本。
+
+#### hoverShape
+
+type : `object`
+
+鼠标悬浮的 shape。
+
+#### mouse
+
+type : `object`
+
+鼠标相关信息。
+其结构为：
+
+```js
+// 鼠标
+mouse = {
+  x: 0, // 视口x
+  y: 0, // 视口y
+  dx: 0, // 画布x
+  dy: 0, // 画布y
+  isPressed: false, // 是否按下
+}
+```
+
+#### readonly
+
+type : `boolean`
+
+只读模式。只读模式下，无法使用绘制功能。可以通过 `setReadOnly` API 切换。
 
 ### API
 
-- clear
-- setMode
-- setPan
-- destroy
-- addShapes
-- addShape
-- removeShapes
-- removeShape
-- updateShapes
-- updateShape
-- selectShape
-- getScale
-- getShapes
-- setDefaultColor
-- setBrushColor
+#### setMode(mode: string): void
+
+设置绘图模式，其入参合法值应为 `tools` 枚举中的值。
+
+#### setPan(pan: boolean): void
+
+设置画布是否允许拖动。
+
+#### addShapes(shapes: object[]): void
+
+添加图形（批量）。
+
+#### addShape(shape: object): void
+
+添加图形（单个）。
+
+#### removeShapes(shapes: object[]): void
+
+删除图形（批量）。
+
+#### removeShape(shape: object): void
+
+删除图形（单个）。
+
+#### updateShapes(shapes: object[]): void
+
+更新图形（批量）。
+
+#### updateShape(shape: object): void
+
+更新图形（单个）。
+
+#### selectShape(shape: object): void
+
+选择图形。
+
+#### clear(): void
+
+清空所有的 shape。
+
+#### destroy(): void
+
+销毁 doodle 实例。
+
+#### getScale(): number
+
+获取缩放比例。
+
+#### getShapes(): object[]
+
+获取所有图形的克隆副本。
+
+#### setDefaultColor(color: string): void
+
+设置默认颜色。
+
+#### setBrushColor(color: string): void
+
+设置画笔颜色。
+
+#### setReadOnly: (readonly: boolean) => void
+
+设置只读模式。
+
+#### moveToShape(shape: object, immediately: boolean): void
+
+移动视野至指定图形。
+
+如果 `immediately` 为 `true` 则立即移动，没有过渡动画。默认为 `false`，有过渡动画。
 
 ### 事件
 
-- onAdd
-- onRemove
-- onUpdate
-- onSelect
+#### onAdd: (shape: object) => void
+
+添加 shape 事件。
+
+#### onRemove: (shape: object) => void
+
+删除 shape 事件。
+
+#### onUpdate: (shape: object) => void
+
+更新 shape 事件。
+
+#### onSelect: (shape: object) => void
+
+选中 shape 事件。
 
 ### shape 对象结构示例
 
 ```js
 export const defaultShapes = [
+  // 矩形
   {
     id: "uLi2gbqSx6sX2a40GiYzr",
     type: "rect",
+    // pos 结构为 [x, y, width, height]，表示矩形左上角的点坐标x,y与矩形的宽高width,height
     pos: [1428, 2067, 1384, 969],
     color: "#0000ff",
   },
+  // 多边形
   {
     id: "pPLz_t2P4ph0U9QWyGhxK",
     type: "polygon",
+    // pos 结构为 [x, y, x, y, x, y,...]，表示多边形各个点的坐标x,y的循环
     pos: [
       4654, 2049, 4178, 2596, 4628, 3098, 5465, 3116, 5924, 2587, 5395, 2058,
     ],
     color: "#e74c3c",
   },
+  // 圆
   {
     id: "CkJbGZOs1VE68YAzPUGtf",
     type: "circle",
+    // pos 结构为 [x, y, r]，x,y为圆心坐标，r为半径
     pos: [8366, 2605, 608],
     color: "#4cd137",
   },
+  // 椭圆
   {
     id: "DOvh2VnbUDFX97ZUtak4V",
     type: "ellipse",
+    // pos 结构为 [x, y, rx, ry]，x,y为圆心坐标，rx为横轴半径，ry为纵轴半径
     pos: [12064, 2746, 1185, 581],
     color: "#3271ae",
   },
+  // 直线
   {
     id: "de3_sHY_w3EL76TeKYRZn",
     type: "line",
+    // pos 结构为 [x, y, x, y]，分别为起点和终点的x,y坐标
     pos: [8260, 4447, 9238, 6272],
     color: "#1abc9c",
   },
+  // 箭头直线
   {
     id: "Jta8DSQvx40n9KXZ7ELyY",
     type: "arrow_line",
+    // pos 结构为 [x, y, x, y]，分别为起点和终点的x,y坐标
     pos: [11442, 6166, 12809, 4544],
     color: "#9c88ff",
   },
+  // 点
   {
     id: "v5uPfeRhZFdBMA-Y16D7L",
     type: "point",
+    // pos 结构为 [x, y]，表示点的x,y坐标
     pos: [2098, 7603],
     color: "#00ff00",
   },
+  // 路径
   {
     id: "YPb7Wk4eQAkNPCKm-kj7C",
     type: "path",
+    // pos 结构为 [x, y, x, y, x, y,...]，表示路径各个点的坐标x,y的循环
     pos: [
       1877, 4632, 1868, 4632, 1860, 4632, 1816, 4641, 1754, 4659, 1692, 4668,
       1648, 4685, 1604, 4694, 1525, 4729, 1445, 4765, 1392, 4809, 1357, 4861,
@@ -152,9 +387,11 @@ export const defaultShapes = [
     ],
     color: "#e18a3b",
   },
+  // 闭合路径
   {
     id: "QDKEJhCju3gY_ClCOhp9H",
     type: "closed_path",
+    // pos 结构为 [x, y, x, y, x, y,...]，表示路径各个点的坐标x,y的循环
     pos: [
       4980, 4350, 4980, 4359, 4936, 4385, 4848, 4421, 4716, 4465, 4592, 4509,
       4496, 4553, 4416, 4597, 4372, 4668, 4363, 4738, 4407, 4835, 4513, 4923,
