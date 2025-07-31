@@ -1,51 +1,68 @@
 export const defaultShapes = [
+  // 矩形
   {
     id: "uLi2gbqSx6sX2a40GiYzr",
     type: "rect",
+    // pos 结构为 [x, y, width, height]，表示矩形左上角的点坐标x,y与矩形的宽高width,height
     pos: [1428, 2067, 1384, 969],
     color: "#0000ff",
+    // readonly: true, // 单独控制该shape是否只读
   },
+  // 多边形
   {
     id: "pPLz_t2P4ph0U9QWyGhxK",
     type: "polygon",
+    // pos 结构为 [x, y, x, y, x, y,...]，表示多边形各个点的坐标x,y的循环
     pos: [
       4654, 2049, 4178, 2596, 4628, 3098, 5465, 3116, 5924, 2587, 5395, 2058,
     ],
     color: "#e74c3c",
   },
+  // 圆
   {
     id: "CkJbGZOs1VE68YAzPUGtf",
     type: "circle",
+    // pos 结构为 [x, y, r]，x,y为圆心坐标，r为半径
     pos: [8366, 2605, 608],
     color: "#4cd137",
   },
+  // 椭圆
   {
     id: "DOvh2VnbUDFX97ZUtak4V",
     type: "ellipse",
+    // pos 结构为 [x, y, rx, ry]，x,y为圆心坐标，rx为横轴半径，ry为纵轴半径
     pos: [12064, 2746, 1185, 581],
     color: "#3271ae",
   },
+  // 直线
   {
     id: "de3_sHY_w3EL76TeKYRZn",
     type: "line",
+    // pos 结构为 [x, y, x, y]，分别为起点和终点的x,y坐标
     pos: [8260, 4447, 9238, 6272],
     color: "#1abc9c",
   },
+  // 箭头直线
   {
     id: "Jta8DSQvx40n9KXZ7ELyY",
     type: "arrow_line",
+    // pos 结构为 [x, y, x, y]，分别为起点和终点的x,y坐标
     pos: [11442, 6166, 12809, 4544],
     color: "#9c88ff",
   },
+  // 点
   {
     id: "v5uPfeRhZFdBMA-Y16D7L",
     type: "point",
+    // pos 结构为 [x, y]，表示点的x,y坐标
     pos: [2098, 7603],
     color: "#00ff00",
   },
+  // 路径
   {
     id: "YPb7Wk4eQAkNPCKm-kj7C",
     type: "path",
+    // pos 结构为 [x, y, x, y, x, y,...]，表示路径各个点的坐标x,y的循环
     pos: [
       1877, 4632, 1868, 4632, 1860, 4632, 1816, 4641, 1754, 4659, 1692, 4668,
       1648, 4685, 1604, 4694, 1525, 4729, 1445, 4765, 1392, 4809, 1357, 4861,
@@ -63,9 +80,11 @@ export const defaultShapes = [
     ],
     color: "#e18a3b",
   },
+  // 闭合路径
   {
     id: "QDKEJhCju3gY_ClCOhp9H",
     type: "closed_path",
+    // pos 结构为 [x, y, x, y, x, y,...]，表示路径各个点的坐标x,y的循环
     pos: [
       4980, 4350, 4980, 4359, 4936, 4385, 4848, 4421, 4716, 4465, 4592, 4509,
       4496, 4553, 4416, 4597, 4372, 4668, 4363, 4738, 4407, 4835, 4513, 4923,

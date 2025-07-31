@@ -170,8 +170,10 @@ export const isPolygonToolToStartPointTooClose = (doodle) => {
 
 // 获取悬浮的shape
 export const getHoverShape = (doodle) => {
+  if (doodle.readonly) return
+  let ret = null
   if (doodle.mode !== doodle.tools.move) {
-    return null
+    ret = null
   }
   const scale = doodle.scale
   const buffer = scale ? doodle.hitRadius / scale : doodle.hitRadius
@@ -204,7 +206,7 @@ export const getHoverShape = (doodle) => {
   // 返回详细命中中的面积最小的那一个
   if (detailedHitBounds.length) {
     if (detailedHitBounds.length === 1) {
-      return shapes.find((item) => item.id === detailedHitBounds[0].id)
+      ret = shapes.find((item) => item.id === detailedHitBounds[0].id)
     }
     detailedHitBounds.sort((a, b) => {
       const shapeA = shapes.find((item) => item.id === a.id)
@@ -212,9 +214,13 @@ export const getHoverShape = (doodle) => {
       // @ts-ignore
       return getShapeArea(doodle, shapeA) - getShapeArea(doodle, shapeB)
     })
-    return shapes.find((item) => item.id === detailedHitBounds[0].id)
+    ret = shapes.find((item) => item.id === detailedHitBounds[0].id)
   }
-  return null
+  // 单个shape只读的控制
+  if (ret && ret.readonly) {
+    ret = null
+  }
+  return ret
 }
 
 // 生成锚点列表

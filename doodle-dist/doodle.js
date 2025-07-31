@@ -79910,8 +79910,10 @@ const isPolygonToolToStartPointTooClose = (doodle) => {
 
 // 获取悬浮的shape
 const getHoverShape = (doodle) => {
+  if (doodle.readonly) return
+  let ret = null;
   if (doodle.mode !== doodle.tools.move) {
-    return null
+    ret = null;
   }
   const scale = doodle.scale;
   const buffer = scale ? doodle.hitRadius / scale : doodle.hitRadius;
@@ -79944,7 +79946,7 @@ const getHoverShape = (doodle) => {
   // 返回详细命中中的面积最小的那一个
   if (detailedHitBounds.length) {
     if (detailedHitBounds.length === 1) {
-      return shapes.find((item) => item.id === detailedHitBounds[0].id)
+      ret = shapes.find((item) => item.id === detailedHitBounds[0].id);
     }
     detailedHitBounds.sort((a, b) => {
       const shapeA = shapes.find((item) => item.id === a.id);
@@ -79952,9 +79954,13 @@ const getHoverShape = (doodle) => {
       // @ts-ignore
       return getShapeArea(doodle, shapeA) - getShapeArea(doodle, shapeB)
     });
-    return shapes.find((item) => item.id === detailedHitBounds[0].id)
+    ret = shapes.find((item) => item.id === detailedHitBounds[0].id);
   }
-  return null
+  // 单个shape只读的控制
+  if (ret && ret.readonly) {
+    ret = null;
+  }
+  return ret
 };
 
 // 生成锚点列表
@@ -80224,14 +80230,17 @@ const getMouseHandler = (doodle) => {
             const cloneTempShape = _.cloneDeep(doodle.tempShape);
             // 修正临时shape的bounds位置
             doodle.correctionTempShapeBounds(originalShape);
-            doodle.tempShape = null;
-            if (originalShape.type === doodle.tools.point) {
-              doodle.generatePoints();
-            }
+            // 触发取消选择事件
+            doodle.conf.onCancelSelect &&
+              doodle.conf.onCancelSelect(cloneTempShape);
             if (
               JSON.stringify(originalShape) !== JSON.stringify(doodle.tempShape)
             ) {
               doodle.conf.onUpdate && doodle.conf.onUpdate(cloneTempShape);
+            }
+            doodle.tempShape = null;
+            if (originalShape.type === doodle.tools.point) {
+              doodle.generatePoints();
             }
           }
         }
@@ -83874,7 +83883,6 @@ class Doodle {
   }
   // 移动处理器
   moveHandler = (e) => {
-    if (this.readonly) return
     const viewport = this.viewer.viewport; // osd 视口对象
     let x, y;
     if (e.position) {
@@ -83912,7 +83920,6 @@ class Doodle {
   }
   // 按下处理器
   pressHandler = () => {
-    if (this.readonly) return
     this.mouse.isPressed = true;
     handleMouseDown(this);
     // 计算锚点
@@ -83922,7 +83929,6 @@ class Doodle {
   }
   // 释放处理器
   releaseHandler = () => {
-    if (this.readonly) return
     this.mouse.isPressed = false;
     handleMouseUp(this);
     // 计算锚点
@@ -83939,10 +83945,9 @@ class Doodle {
   }
   // 设置模式
   setMode(mode) {
-    if (this.readonly) mode = this.tools.move;
     this.mode = mode;
     this.setPan(mode === this.tools.move);
-    this.resetTempShape();
+    this.cancelSelectShape();
   }
   // 设置允许拖动
   setPan(pan) {
@@ -83961,7 +83966,6 @@ class Doodle {
   // 监听键盘
   listenKeyboard() {
     onKeyStroke(["Delete"], async (e) => {
-      if (this.readonly) return
       switch (e.code) {
         case "Delete":
           // @ts-ignore
@@ -84061,6 +84065,20 @@ class Doodle {
     // 计算锚点
     generateAnchors(this);
   }
+  // 取消选择图形
+  cancelSelectShape() {
+    // 如果有临时shape则修正bounds位置
+    const originalShape = this.shapes.find(
+      // @ts-ignore
+      (item) => item.id === this.tempShape?.id
+    );
+    if (originalShape) {
+      // 修正临时shape的bounds位置
+      this.correctionTempShapeBounds(originalShape);
+    }
+    this.tempShape = null;
+    this.anchors = [];
+  }
   // 创建pixi
   async createPixi() {
     const osdDom = this.viewer.canvas;
@@ -84117,10 +84135,6 @@ class Doodle {
   // 更新鼠标样式
   updateCursor() {
     let cursor = "default";
-    if (this.readonly) {
-      this.viewer.canvas.style.cursor = cursor;
-      return
-    }
     if (this.mode !== this.tools.move) {
       // 绘制中，使用十字线
       cursor = "crosshair";
@@ -84208,24 +84222,8 @@ class Doodle {
   setReadOnly = (readonly) => {
     this.readonly = readonly;
     if (this.readonly) {
-      this.setMode(this.tools.move);
+      this.cancelSelectShape();
     }
-    // 更新鼠标样式
-    this.updateCursor();
-  }
-  // 重置tempshape
-  resetTempShape() {
-    // 如果有临时shape则触发编辑保存
-    const originalShape = this.shapes.find(
-      // @ts-ignore
-      (item) => item.id === this.tempShape?.id
-    );
-    if (originalShape) {
-      // 修正临时shape的bounds位置
-      this.correctionTempShapeBounds(originalShape);
-    }
-    this.tempShape = null;
-    this.anchors = [];
   }
   // 获取一个形状的中心点
   getShapeCenter(shape) {
@@ -84237,8 +84235,10 @@ class Doodle {
   }
   // 移动视野到某个shape
   moveToShape(shape = null, immediately = false) {
-    if (!shape) {
-      return
+    if (!shape) return
+    // @ts-ignore
+    if (shape.id === this.tempShape?.id) {
+      shape = this.tempShape;
     }
     const viewport = this.viewer.viewport;
     const center = this.getShapeCenter(shape);

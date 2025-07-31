@@ -36,6 +36,10 @@ const doodle = createDoodle({
   onSelect: (shape) => {
     console.log("选中了shape", shape)
   },
+  // 监听取消选中 shape 事件
+  onCancelSelect: (shape) => {
+    console.log("取消选中了shape", shape)
+  },
 })
 
 // 添加图形
@@ -211,7 +215,9 @@ mouse = {
 
 type : `boolean`
 
-只读模式。只读模式下，无法使用绘制功能。可以通过 `setReadOnly` API 切换。
+全局只读模式。只读模式下，shape 无法被选中。可以通过 `setReadOnly` API 切换。
+
+如果想要精确控制某个 shape 的只读模式。可以直接修改该 shape 的 `readonly` 属性。
 
 ### API
 
@@ -249,7 +255,11 @@ type : `boolean`
 
 #### selectShape(shape: object): void
 
-选择图形。
+选择图形。该方法不会触发 `onSelect` 事件。
+
+#### cancelSelectShape(): void
+
+取消选择图形。该方法不会触发 `onCancelSelect` 事件。
 
 #### clear(): void
 
@@ -277,7 +287,9 @@ type : `boolean`
 
 #### setReadOnly: (readonly: boolean) => void
 
-设置只读模式。
+设置全局只读模式。
+
+如果想要精确控制某个 shape 的只读模式。可以直接修改该 shape 的 `readonly` 属性。
 
 #### moveToShape(shape: object, immediately: boolean): void
 
@@ -303,6 +315,10 @@ type : `boolean`
 
 选中 shape 事件。
 
+#### onCancelSelect: (shape: object) => void
+
+取消选中 shape 事件。
+
 ### shape 对象结构示例
 
 ```js
@@ -314,6 +330,7 @@ export const defaultShapes = [
     // pos 结构为 [x, y, width, height]，表示矩形左上角的点坐标x,y与矩形的宽高width,height
     pos: [1428, 2067, 1384, 969],
     color: "#0000ff",
+    // readonly: true, // 单独控制该shape是否只读
   },
   // 多边形
   {

@@ -74,6 +74,10 @@ const initDoodle = () => {
     onSelect: (shape) => {
       console.log("选中了shape", shape)
     },
+    // 监听取消选中 shape 事件
+    onCancelSelect: (shape) => {
+      console.log("取消选中了shape", shape)
+    },
   })
   // markRaw防止vue代理产生性能问题
   state.doodle = markRaw(doodle)
@@ -144,7 +148,6 @@ const rotation = (angle) => {
 const setReadOnly = (v) => {
   state.readonly = v
   state.doodle.setReadOnly(v)
-  state.mode = state.doodle.tools.move
 }
 // 移动视野至第一个shape
 const moveToFirstShape = () => {
@@ -157,6 +160,16 @@ const mirror = () => {
   const viewport = state.viewer.viewport
   const flip = viewport.getFlip()
   viewport.setFlip(!flip)
+}
+// 选中第一个shape
+const selectFirstShape = () => {
+  const firstShape = state.doodle.shapes[0]
+  if (!firstShape) return
+  state.doodle.selectShape(firstShape)
+}
+// 取消选中shape
+const cancelSelectShape = () => {
+  state.doodle.cancelSelectShape()
 }
 
 onMounted(() => {
@@ -239,6 +252,12 @@ onMounted(() => {
             <n-button size="tiny" @click="rotation(-5)"> 向左旋转 </n-button>
             <n-button size="tiny" @click="rotation(5)"> 向右旋转 </n-button>
             <n-button size="tiny" @click="mirror()"> 镜像翻转 </n-button>
+            <n-button size="tiny" @click="selectFirstShape()">
+              选中第一个shape
+            </n-button>
+            <n-button size="tiny" @click="cancelSelectShape()">
+              取消选中shape
+            </n-button>
             <n-button size="tiny" @click="moveToFirstShape()">
               移动视野至第一个shape
             </n-button>

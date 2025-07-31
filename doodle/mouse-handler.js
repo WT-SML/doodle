@@ -114,14 +114,17 @@ export const getMouseHandler = (doodle) => {
             const cloneTempShape = _.cloneDeep(doodle.tempShape)
             // 修正临时shape的bounds位置
             doodle.correctionTempShapeBounds(originalShape)
-            doodle.tempShape = null
-            if (originalShape.type === doodle.tools.point) {
-              doodle.generatePoints()
-            }
+            // 触发取消选择事件
+            doodle.conf.onCancelSelect &&
+              doodle.conf.onCancelSelect(cloneTempShape)
             if (
               JSON.stringify(originalShape) !== JSON.stringify(doodle.tempShape)
             ) {
               doodle.conf.onUpdate && doodle.conf.onUpdate(cloneTempShape)
+            }
+            doodle.tempShape = null
+            if (originalShape.type === doodle.tools.point) {
+              doodle.generatePoints()
             }
           }
         } else {
