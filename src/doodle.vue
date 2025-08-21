@@ -111,6 +111,15 @@ const random10000Points = async () => {
   const points = randomPoints(state.viewer, 10000)
   state.doodle.addShapes(points)
 }
+// 生成100万个高性能点标注
+const randomFastPoints = async () => {
+  const points = randomPoints(state.viewer, 100 * 10000)
+  state.doodle.addFastPoints(points)
+}
+// 清空高性能点标注
+const clearFastPoints = () => {
+  state.doodle.clearFastPoints()
+}
 // 随机生成1000个点标注
 const random10000Rects = async () => {
   const rects = randomRects(state.viewer, 1000)
@@ -203,9 +212,9 @@ onMounted(() => {
         </svg>
       </a>
     </div>
-    <div class="flex-grow flex">
+    <div class="flex-grow flex overflow-hidden">
       <!-- 侧边导航 -->
-      <div class="w-200px flex-shrink-0 border-r p-3">
+      <div class="w-200px flex-shrink-0 border-r p-3 overflow-y-auto">
         <div class="mb-2">模式：</div>
         <div v-if="state.doodle" class="pl-5 mb-3 flex flex-col">
           <n-checkbox
@@ -248,6 +257,14 @@ onMounted(() => {
             </n-button>
             <n-button size="tiny" @click="random10000Rects()">
               生成1000个矩形标注
+            </n-button>
+            <n-button size="tiny" @click="randomFastPoints()">
+              生成
+              <span class="text-[#f00]">100万</span>
+              个高性能点
+            </n-button>
+            <n-button size="tiny" @click="clearFastPoints()">
+              清空高性能点标注
             </n-button>
             <n-button size="tiny" @click="rotation(-5)"> 向左旋转 </n-button>
             <n-button size="tiny" @click="rotation(5)"> 向右旋转 </n-button>

@@ -6,6 +6,9 @@ import {
   Shader,
   Geometry,
   BufferUsage,
+  ParticleContainer,
+  Particle,
+  Texture,
 } from "pixi.js"
 import { render } from "./render"
 import osd from "openseadragon"
@@ -73,6 +76,16 @@ export class Doodle {
     dy: 0, // 画布y
     isPressed: false, // 是否按下
   }
+  // 高性能点的容器
+  fastPointsContainer = new ParticleContainer({
+    dynamicProperties: {
+      position: false,
+    },
+  })
+  // 高性能点的纹理
+  fastPointTexture = this.createCircleTexture()
+  // 高性能点数组
+  fastPoints = []
   constructor(conf) {
     // 存储配置
     this.conf = {
@@ -93,6 +106,57 @@ export class Doodle {
       // 开始循环
       this.startLoop()
     })()
+  }
+  // 添加高性能点（批量）
+  addFastPoints(points) {
+    for (const v of points) {
+      const particle = new Particle({
+        texture: this.fastPointTexture,
+        x: v.pos[0],
+        y: v.pos[1],
+        tint: v.color || this.defaultColor,
+      })
+      this.fastPointsContainer.addParticle(particle)
+      v.particle = particle
+      this.fastPoints.push(v)
+    }
+  }
+  // 添加高性能点（单个）
+  addFastPoint(point) {
+    const particle = new Particle({
+      texture: this.fastPointTexture,
+      x: point.pos[0],
+      y: point.pos[1],
+      tint: point.color || this.defaultColor,
+    })
+    this.fastPointsContainer.addParticle(particle)
+    point.particle = particle
+    this.fastPoints.push(point)
+  }
+  // 清空高性能点
+  clearFastPoints() {
+    this.fastPointsContainer.removeParticles(0, this.fastPoints.length - 1)
+    this.fastPoints = []
+  }
+  // 创建高性能点的纹理
+  createCircleTexture(radius = 4) {
+    const canvas = document.createElement("canvas")
+    const size = radius * 2
+    canvas.width = size
+    canvas.height = size
+    // @ts-ignore
+    const ctx = canvas.getContext("2d")
+    // 绘制圆形
+    // @ts-ignore
+    ctx.fillStyle = "#FFFFFF"
+    // @ts-ignore
+    ctx.beginPath()
+    // @ts-ignore
+    ctx.arc(radius, radius, radius, 0, Math.PI * 2)
+    // @ts-ignore
+    ctx.fill()
+    // 创建纹理
+    return Texture.from(canvas)
   }
   // 清空标注
   clear() {
@@ -323,6 +387,9 @@ export class Doodle {
     app.canvas.style.top = "0"
     app.canvas.style.left = "0"
 
+    // 高性能点容器
+    app.stage.addChild(this.fastPointsContainer)
+
     // 图形
     const graphics = new Graphics()
     this.graphics = graphics
@@ -330,7 +397,6 @@ export class Doodle {
 
     // 点的Mesh
     this.generatePoints()
-
     // @ts-ignore
     window.__PIXI_DEVTOOLS__ = {
       app: app,
