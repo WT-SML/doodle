@@ -5,7 +5,7 @@ export const defaultShapes = [
     type: "rect",
     // pos 结构为 [x, y, width, height]，表示矩形左上角的点坐标x,y与矩形的宽高width,height
     pos: [1428, 2067, 1384, 969],
-    color: "#0000ff",
+    color: "#FF0000",
     // readonly: true, // 单独控制该shape是否只读
   },
   // 多边形
@@ -16,7 +16,7 @@ export const defaultShapes = [
     pos: [
       4654, 2049, 4178, 2596, 4628, 3098, 5465, 3116, 5924, 2587, 5395, 2058,
     ],
-    color: "#e74c3c",
+    color: "#00FF00",
   },
   // 圆
   {
@@ -24,7 +24,7 @@ export const defaultShapes = [
     type: "circle",
     // pos 结构为 [x, y, r]，x,y为圆心坐标，r为半径
     pos: [8366, 2605, 608],
-    color: "#4cd137",
+    color: "#0000FF",
   },
   // 椭圆
   {
@@ -32,7 +32,7 @@ export const defaultShapes = [
     type: "ellipse",
     // pos 结构为 [x, y, rx, ry]，x,y为圆心坐标，rx为横轴半径，ry为纵轴半径
     pos: [12064, 2746, 1185, 581],
-    color: "#3271ae",
+    color: "#FFFF00",
   },
   // 直线
   {
@@ -40,7 +40,7 @@ export const defaultShapes = [
     type: "line",
     // pos 结构为 [x, y, x, y]，分别为起点和终点的x,y坐标
     pos: [8260, 4447, 9238, 6272],
-    color: "#1abc9c",
+    color: "#00FFFF",
   },
   // 箭头直线
   {
@@ -48,7 +48,7 @@ export const defaultShapes = [
     type: "arrow_line",
     // pos 结构为 [x, y, x, y]，分别为起点和终点的x,y坐标
     pos: [11442, 6166, 12809, 4544],
-    color: "#9c88ff",
+    color: "#FF00FF",
   },
   // 点
   {
@@ -56,7 +56,7 @@ export const defaultShapes = [
     type: "point",
     // pos 结构为 [x, y]，表示点的x,y坐标
     pos: [2098, 7603],
-    color: "#00ff00",
+    color: "#FF0000",
   },
   // 路径
   {
@@ -78,7 +78,7 @@ export const defaultShapes = [
       2900, 4579, 2882, 4544, 2856, 4526, 2812, 4500, 2768, 4474, 2715, 4465,
       2644, 4465, 2556, 4465, 2477, 4465, 2415, 4474, 2380, 4482, 2371, 4491,
     ],
-    color: "#e18a3b",
+    color: "#FFFFFF",
   },
   // 闭合路径
   {
@@ -107,6 +107,6 @@ export const defaultShapes = [
       5492, 3998, 5465, 3989, 5430, 3989, 5395, 3980, 5377, 3980, 5351, 3980,
       5324, 3980, 5315, 3980, 5307, 3980,
     ],
-    color: "#fedc5e",
+    color: "#000000",
   },
 ]
