@@ -56,7 +56,7 @@ export class Doodle {
 		y: 0,
 	}
 	strokeWidth = 2 // 线宽
-	defaultColor = "#FF0000" // 默认颜色
+	defaultColor = "#FF0000" // 默认颜色（当shape没有指定颜色时使用此颜色绘制）
 	brushColor = "#FF0000" // 画笔颜色
 	hitRadius = 5 // 光标的碰撞半径
 	anchorRadius = 5 // 锚点半径
@@ -92,11 +92,14 @@ export class Doodle {
 			this.createMouseTracker()
 			// 开始循环
 			this.startLoop()
+			// 回调
+			this.conf.onLoad?.()
 		})()
 	}
 	// 清空标注
 	clear() {
 		this.tempShape = null
+		this.hoverShape = null
 		this.shapes = []
 		this.anchors = []
 		this.bounds.clear()
@@ -259,6 +262,10 @@ export class Doodle {
 		if (shapes.find((shape) => shape.id === this.tempShape?.id)) {
 			this.tempShape = null
 		}
+		// @ts-ignore
+		if (shapes.find((shape) => shape.id === this.hoverShape?.id)) {
+			this.hoverShape = null
+		}
 	}
 	// 删除图形
 	removeShape(shape) {
@@ -272,6 +279,10 @@ export class Doodle {
 		// @ts-ignore
 		if (shape.id === this.tempShape?.id) {
 			this.tempShape = null
+		}
+		// @ts-ignore
+		if (shape.id === this.hoverShape?.id) {
+			this.hoverShape = null
 		}
 		// 计算锚点
 		generateAnchors(this)

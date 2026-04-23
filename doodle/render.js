@@ -163,7 +163,7 @@ export const drawShapes = (doodle) => {
 				})
 				graphics.fill({
 					color: doodle.parseColor(doodle.hoverShape.color),
-					alpha: 0.2,
+					alpha: 0,
 				})
 			}
 		}
