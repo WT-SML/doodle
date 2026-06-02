@@ -285,7 +285,7 @@ type : `boolean`
 
 设置画笔颜色。
 
-#### setReadOnly: (readonly: boolean) => void
+#### setReadOnly(readonly: boolean): void
 
 设置全局只读模式。
 
