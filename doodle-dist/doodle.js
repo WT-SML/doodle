@@ -62184,249 +62184,273 @@ function pointInPolygon(point, polygon) {
 
 // 渲染方法
 const render = (doodle) => {
-  const viewport = doodle.viewer.viewport; // osd 视口对象
-  const scale = doodle.getScale(); // 缩放
-  const flipped = viewport.getFlip(); // 翻转
-  const angle = viewport.getRotation(true); // 旋转角度
-  let rotation = angle * (Math.PI / 180); // 旋转弧度
-  // 归一化到 [0, 2π] 范围
-  if (rotation < 0) rotation += 2 * Math.PI;
-  if (rotation > 2 * Math.PI) rotation -= 2 * Math.PI;
-  // 旋转翻转
-  rotation = flipped ? -rotation : rotation;
-  // 图像左上角原点相对于视口的偏移
-  const origin = viewport.pixelFromPoint(new osd.Point(0, 0), true);
-  if (flipped) {
-    origin.x = viewport._containerInnerSize.x - origin.x;
-  }
-  const tx = origin.x; // x轴平移
-  const ty = origin.y; // y轴平移
-  doodle.scale = scale;
-  doodle.translate.x = tx;
-  doodle.translate.y = ty;
-  doodle.pixiApp.stage.x = tx;
-  doodle.pixiApp.stage.y = ty;
-  doodle.pixiApp.stage.scale.set(flipped ? -scale : scale, scale);
-  doodle.pixiApp.stage.rotation = rotation;
-  // 更新非点图形
-  drawShapes(doodle);
-  // Mesh
-  updatePointMesh(doodle);
+	const viewport = doodle.viewer.viewport; // osd 视口对象
+	const scale = doodle.getScale(); // 缩放
+	const flipped = viewport.getFlip(); // 翻转
+	const angle = viewport.getRotation(true); // 旋转角度
+	let rotation = angle * (Math.PI / 180); // 旋转弧度
+	// 归一化到 [0, 2π] 范围
+	if (rotation < 0) rotation += 2 * Math.PI;
+	if (rotation > 2 * Math.PI) rotation -= 2 * Math.PI;
+	// 旋转翻转
+	rotation = flipped ? -rotation : rotation;
+	// 图像左上角原点相对于视口的偏移
+	const origin = viewport.pixelFromPoint(new osd.Point(0, 0), true);
+	if (flipped) {
+		origin.x = viewport._containerInnerSize.x - origin.x;
+	}
+	const tx = origin.x; // x轴平移
+	const ty = origin.y; // y轴平移
+	doodle.scale = scale;
+	doodle.translate.x = tx;
+	doodle.translate.y = ty;
+	doodle.pixiApp.stage.x = tx;
+	doodle.pixiApp.stage.y = ty;
+	doodle.pixiApp.stage.scale.set(flipped ? -scale : scale, scale);
+	doodle.pixiApp.stage.rotation = rotation;
+	// 更新非点图形
+	drawShapes(doodle);
+	// Mesh
+	updatePointMesh(doodle);
 };
 // 更新点的Mesh
 const updatePointMesh = (doodle) => {
-  if (!doodle.pointMesh) return
-  const scale = doodle.scale;
-  doodle.pointMesh.scale = 1 / scale;
-  const instancePositionBuffer =
-    doodle.pointMesh.geometry.attributes.aPositionOffset.buffer;
-  const data = instancePositionBuffer.data;
-  let count = 0;
-  for (let _i in doodle.points) {
-    let i = Number(_i);
-    const point = doodle.points[i];
-    data[count++] = point.pos[0] * scale;
-    data[count++] = point.pos[1] * scale;
-  }
-  instancePositionBuffer.update();
+	if (!doodle.pointMesh) return
+	const scale = doodle.scale;
+	doodle.pointMesh.scale = 1 / scale;
+	const instancePositionBuffer =
+		doodle.pointMesh.geometry.attributes.aPositionOffset.buffer;
+	const data = instancePositionBuffer.data;
+	let count = 0;
+	for (let _i in doodle.points) {
+		let i = Number(_i);
+		const point = doodle.points[i];
+		data[count++] = point.pos[0] * scale;
+		data[count++] = point.pos[1] * scale;
+	}
+	instancePositionBuffer.update();
 };
 
 // 绘制shapes
 const drawShapes = (doodle) => {
-  doodle.graphics.clear();
-  // 已有形状
-  for (const shape of doodle.shapes) {
-    if (doodle.tempShape && doodle.tempShape.id === shape.id) continue
-    if (shape.type === doodle.tools.point) continue
-    drawShape(shape, doodle);
-  }
-  // 新增形状
-  if (doodle.tempShape) drawShape(doodle.tempShape, doodle);
-  // 锚点
-  drawAnchors(doodle);
+	doodle.graphics.clear();
+	const colorGroup = {};
+	const graphics = doodle.graphics;
+	const strokeWidth = doodle.strokeWidth / doodle.scale;
+	const largeStrokeWidth = (doodle.strokeWidth + 1) / doodle.scale;
+	const pointStrokeWidth = (doodle.strokeWidth + 2) / doodle.scale;
+	// 已有形状
+	for (const shape of doodle.shapes) {
+		// 点单独渲染
+		if (shape.type === doodle.tools.point) continue
+		// 新增or编辑形状单独渲染
+		if (doodle.tempShape && doodle.tempShape.id === shape.id) continue
+		// hover形状单独渲染
+		if (doodle.hoverShape && doodle.hoverShape.id === shape.id) continue
+		// 分组
+		if (colorGroup[shape.color]) {
+			colorGroup[shape.color].push(shape);
+		} else {
+			colorGroup[shape.color] = [shape];
+		}
+	}
+	for (const k in colorGroup) {
+		const v = colorGroup[k];
+		for (const shape of v) {
+			drawShape(shape, doodle);
+		}
+		// 染色
+		graphics.stroke({
+			width: strokeWidth,
+			color: doodle.parseColor(k),
+		});
+		graphics.fill({
+			color: doodle.parseColor(k),
+			alpha: 0,
+		});
+	}
+	if (
+		doodle.tempShape &&
+		doodle.hoverShape &&
+		doodle.tempShape.id === doodle.hoverShape.id
+	) {
+		// 新增or编辑形状 和 hover形状是同一个
+		drawShape(doodle.tempShape, doodle);
+		// 染色
+		if (doodle.tempShape.type === doodle.tools.point) {
+			// 点
+			graphics.stroke({
+				width: pointStrokeWidth,
+				color: doodle.parseColor(doodle.tempShape.color),
+			});
+			graphics.fill({
+				color: doodle.parseColor("#FFFFFF"),
+				alpha: 1,
+			});
+		} else {
+			// 其他
+			graphics.stroke({
+				width: largeStrokeWidth,
+				color: doodle.parseColor(doodle.tempShape.color),
+			});
+			graphics.fill({
+				color: doodle.parseColor(doodle.tempShape.color),
+				alpha: 0.2,
+			});
+		}
+	} else {
+		// 新增or编辑形状
+		if (doodle.tempShape) {
+			drawShape(doodle.tempShape, doodle);
+			// 染色
+			if (doodle.tempShape.type === doodle.tools.point) {
+				// 点
+				graphics.stroke({
+					width: pointStrokeWidth,
+					color: doodle.parseColor(doodle.tempShape.color),
+				});
+				graphics.fill({
+					color: doodle.parseColor("#FFFFFF"),
+					alpha: 1,
+				});
+			} else {
+				graphics.stroke({
+					width: strokeWidth,
+					color: doodle.parseColor(doodle.tempShape.color),
+				});
+				graphics.fill({
+					color: doodle.parseColor(doodle.tempShape.color),
+					alpha: doodle.tempShape.id ? 0.2 : 0,
+				});
+			}
+		}
+		// hover形状
+		if (doodle.hoverShape) {
+			drawShape(doodle.hoverShape, doodle);
+			if (doodle.hoverShape.type === doodle.tools.point) {
+				// 点
+				graphics.stroke({
+					width: pointStrokeWidth,
+					color: doodle.parseColor(doodle.hoverShape.color),
+				});
+				graphics.fill({
+					color: doodle.parseColor(doodle.hoverShape.color),
+					alpha: 1,
+				});
+			} else {
+				graphics.stroke({
+					width: largeStrokeWidth,
+					color: doodle.parseColor(doodle.hoverShape.color),
+				});
+				graphics.fill({
+					color: doodle.parseColor(doodle.hoverShape.color),
+					alpha: 0,
+				});
+			}
+		}
+	}
+	// 锚点
+	drawAnchors(doodle);
 };
 
 // 绘制shape
 const drawShape = (shape, doodle) => {
-  const isHover = doodle.hoverShape && doodle.hoverShape.id === shape.id;
-  const isEdit =
-    doodle.tempShape && doodle.tempShape.id && doodle.tempShape.id === shape.id;
-
-  const strokeWidth =
-    (isHover ? doodle.strokeWidth + 1 : doodle.strokeWidth) / doodle.scale;
-  const pointRadius =
-    (isHover ? doodle.pointRadius + 1 : doodle.pointRadius) / doodle.scale;
-  const alpha = isEdit ? 0.2 : 0;
-  const color = shape.id
-    ? shape.color || doodle.defaultColor
-    : shape.color || doodle.brushColor;
-
-  const graphics = doodle.graphics;
-  const pos = shape.pos;
-
-  switch (shape.type) {
-    case doodle.tools.rect:
-      // 矩形
-      graphics.rect(pos[0], pos[1], pos[2], pos[3]);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha,
-      });
-      break
-    case doodle.tools.polygon:
-      // 多边形
-      graphics.poly(pos, !!shape.id);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha,
-      });
-      // 闭合锚点
-      if (!shape.id) {
-        const anchorStrokeWidth = (doodle.strokeWidth + 2) / doodle.scale;
-        const anchorRadius = doodle.anchorRadius / doodle.scale;
-        graphics.circle(pos[0], pos[1], anchorRadius);
-        graphics.stroke({
-          width: anchorStrokeWidth,
-          color: doodle.parseColor(color),
-        });
-        graphics.fill({
-          color: doodle.parseColor("#FFFFFF"),
-          alpha: 1,
-        });
-      }
-      break
-    case doodle.tools.circle:
-      // 圆
-      graphics.circle(pos[0], pos[1], pos[2]);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha,
-      });
-      break
-    case doodle.tools.ellipse:
-      // 椭圆
-      graphics.ellipse(pos[0], pos[1], pos[2], pos[3]);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha,
-      });
-      break
-    case doodle.tools.path:
-      // 路径
-      graphics.poly(pos, false);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha,
-      });
-      break
-    case doodle.tools.closed_path:
-      // 闭合路径
-      graphics.poly(pos, !!shape.id);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha,
-      });
-      break
-    case doodle.tools.line:
-      // 直线
-      graphics.poly(pos, false);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha: 0,
-      });
-      break
-    case doodle.tools.arrow_line:
-      // 箭头直线
-      graphics.poly(pos, false);
-      // 箭头
-      graphics.poly(generateArrowPath(shape, doodle), false);
-      graphics.stroke({
-        width: strokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(color),
-        alpha: 0,
-      });
-      break
-    case doodle.tools.point:
-      // 点
-      graphics.circle(pos[0], pos[1], pointRadius);
-      const myStrokeWidth = (isEdit ? doodle.strokeWidth + 2 : 0) / doodle.scale;
-      const fillColor = isEdit ? "#FFFFFF" : color;
-      graphics.stroke({
-        width: myStrokeWidth,
-        color: doodle.parseColor(color),
-      });
-      graphics.fill({
-        color: doodle.parseColor(fillColor),
-        alpha: 1,
-      });
-      break
-  }
+	const isHover = doodle.hoverShape && doodle.hoverShape.id === shape.id;
+	const pointRadius =
+		(isHover ? doodle.pointRadius + 1 : doodle.pointRadius) / doodle.scale;
+	const color = shape.id
+		? shape.color || doodle.defaultColor
+		: shape.color || doodle.brushColor;
+	const graphics = doodle.graphics;
+	const pos = shape.pos;
+	switch (shape.type) {
+		case doodle.tools.rect:
+			// 矩形
+			graphics.rect(pos[0], pos[1], pos[2], pos[3]);
+			break
+		case doodle.tools.polygon:
+			// 多边形
+			graphics.poly(pos, !!shape.id);
+			// 闭合锚点
+			if (!shape.id) {
+				const anchorStrokeWidth = (doodle.strokeWidth + 2) / doodle.scale;
+				const anchorRadius = doodle.anchorRadius / doodle.scale;
+				graphics.circle(pos[0], pos[1], anchorRadius);
+				graphics.stroke({
+					width: anchorStrokeWidth,
+					color: doodle.parseColor(color),
+				});
+				graphics.fill({
+					color: doodle.parseColor("#FFFFFF"),
+					alpha: 1,
+				});
+			}
+			break
+		case doodle.tools.circle:
+			// 圆
+			graphics.circle(pos[0], pos[1], pos[2]);
+			break
+		case doodle.tools.ellipse:
+			// 椭圆
+			graphics.ellipse(pos[0], pos[1], pos[2], pos[3]);
+			break
+		case doodle.tools.path:
+			// 路径
+			graphics.poly(pos, false);
+			break
+		case doodle.tools.closed_path:
+			// 闭合路径
+			graphics.poly(pos, !!shape.id);
+			break
+		case doodle.tools.line:
+			// 直线
+			graphics.poly(pos, false);
+			break
+		case doodle.tools.arrow_line:
+			// 箭头直线
+			graphics.poly(pos, false);
+			// 箭头
+			graphics.poly(generateArrowPath(shape, doodle), false);
+			break
+		case doodle.tools.point:
+			// 点
+			graphics.circle(pos[0], pos[1], pointRadius);
+			break
+	}
 };
-
 // 获取箭头的path
 const generateArrowPath = (shape, doodle) => {
-  const startPoint = [shape.pos[0], shape.pos[1]];
-  const endPoint = [shape.pos[2], shape.pos[3]];
-  // @ts-ignore
-  const angle = lineAngle([startPoint, endPoint]);
-  const referencePoint = [endPoint[0], endPoint[1] + 10 / doodle.scale];
-  // @ts-ignore
-  const pointA = pointRotate(referencePoint, angle + 90 + 30, endPoint);
-  // @ts-ignore
-  const pointB = pointRotate(referencePoint, angle + 90 - 30, endPoint);
-  return [pointA[0], pointA[1], endPoint[0], endPoint[1], pointB[0], pointB[1]]
+	const startPoint = [shape.pos[0], shape.pos[1]];
+	const endPoint = [shape.pos[2], shape.pos[3]];
+	// @ts-ignore
+	const angle = lineAngle([startPoint, endPoint]);
+	const referencePoint = [endPoint[0], endPoint[1] + 10 / doodle.scale];
+	// @ts-ignore
+	const pointA = pointRotate(referencePoint, angle + 90 + 30, endPoint);
+	// @ts-ignore
+	const pointB = pointRotate(referencePoint, angle + 90 - 30, endPoint);
+	return [pointA[0], pointA[1], endPoint[0], endPoint[1], pointB[0], pointB[1]]
 };
 
 // 绘制锚点
 const drawAnchors = (doodle) => {
-  const strokeWidth = (doodle.strokeWidth + 2) / doodle.scale;
-  const anchorRadius = doodle.anchorRadius / doodle.scale;
-  const graphics = doodle.graphics;
-  const color = doodle.tempShape?.id
-    ? doodle.tempShape?.color || doodle.defaultColor
-    : doodle.tempShape?.color || doodle.brushColor;
-  for (const anchor of doodle.anchors) {
-    graphics.circle(anchor.x, anchor.y, anchorRadius);
-    graphics.stroke({
-      width: strokeWidth,
-      color: doodle.parseColor(color),
-    });
-    graphics.fill({
-      color: doodle.parseColor("#FFFFFF"),
-      alpha: 1,
-    });
-  }
+	const strokeWidth = (doodle.strokeWidth + 2) / doodle.scale;
+	const anchorRadius = doodle.anchorRadius / doodle.scale;
+	const graphics = doodle.graphics;
+	const color = doodle.tempShape?.id
+		? doodle.tempShape?.color || doodle.defaultColor
+		: doodle.tempShape?.color || doodle.brushColor;
+	for (const anchor of doodle.anchors) {
+		graphics.circle(anchor.x, anchor.y, anchorRadius);
+		graphics.stroke({
+			width: strokeWidth,
+			color: doodle.parseColor(color),
+		});
+		graphics.fill({
+			color: doodle.parseColor("#FFFFFF"),
+			alpha: 1,
+		});
+	}
 };
 
 var lodash$1 = {exports: {}};
@@ -83798,453 +83822,465 @@ const generateCircleGeometry = (segments = 40, radius = 6) => {
 };
 
 class Doodle {
-  // 绘图工具列表
-  tools = {
-    move: "move", // 移动
-    rect: "rect", // 矩形
-    polygon: "polygon", // 多边形
-    circle: "circle", // 圆
-    ellipse: "ellipse", // 椭圆
-    path: "path", // 路径
-    closed_path: "closed_path", // 闭合路径
-    line: "line", // 直线
-    arrow_line: "arrow_line", // 箭头直线
-    point: "point", // 点
-  }
-  // 配置
-  conf = {
-    viewer: null,
-  }
-  pixiApp // pixi app
-  graphics // pixi graphics
-  pointMesh // 点的Mesh
-  points = [] // 点集合
-  mode = this.tools.move // 模式
-  viewer // osd的画布
-  shapes = [] // 形状数组
-  bounds // 边界
-  anchors = [] // 锚点数组
-  scale = 1 // 缩放
-  // 平移
-  translate = {
-    x: 0,
-    y: 0,
-  }
-  strokeWidth = 2 // 线宽
-  defaultColor = "#FF0000" // 默认颜色
-  brushColor = "#FF0000" // 画笔颜色
-  hitRadius = 5 // 光标的碰撞半径
-  anchorRadius = 5 // 锚点半径
-  pointRadius = 6 // 点半径
-  tempShape = null // 临时shape（新增和编辑时）
-  hoverShape = null // 悬浮的shape
-  hoverAnchor = null // 悬浮的锚点
-  readonly = false // 只读模式
-  // 鼠标
-  mouse = {
-    x: 0, // 视口x
-    y: 0, // 视口y
-    dx: 0, // 画布x
-    dy: 0, // 画布y
-    isPressed: false, // 是否按下
-  }
-  constructor(conf) {
-    // 存储配置
-    this.conf = {
-      ...this.conf,
-      ...conf,
-    };
-    this.viewer = this.conf.viewer;
-    // 初始化 边界
-    this.createBounds();
-    // 监听键盘
-    this.listenKeyboard()
-    // 画布
-    ;(async () => {
-      // 初始化 pxii
-      await this.createPixi();
-      // 初始化 鼠标跟踪器
-      this.createMouseTracker();
-      // 开始循环
-      this.startLoop();
-    })();
-  }
-  // 清空标注
-  clear() {
-    this.tempShape = null;
-    this.shapes = [];
-    this.anchors = [];
-    this.bounds.clear();
-    this.generatePoints();
-  }
-  // 初始化边界
-  createBounds() {
-    this.bounds = new RBush();
-  }
-  // 移动处理器
-  moveHandler = (e) => {
-    const viewport = this.viewer.viewport; // osd 视口对象
-    let x, y;
-    if (e.position) {
-      x = e.position.x;
-      y = e.position.y;
-    } else {
-      x = e.offsetX;
-      y = e.offsetY;
-    }
-    const flipped = viewport.getFlip(); // 翻转
-    if (flipped) {
-      x = viewport._containerInnerSize.x - x;
-    }
-    this.mouse.x = x;
-    this.mouse.y = y;
-    const viewportPoint = viewport.pointFromPixel(
-      new osd.Point(this.mouse.x, this.mouse.y),
-      true
-    );
-    const dp = viewport._viewportToImageDelta(
-      viewportPoint.x - viewport._contentBoundsNoRotate.x,
-      viewportPoint.y - viewport._contentBoundsNoRotate.y
-    );
-    this.mouse.dx = dp.x;
-    this.mouse.dy = dp.y;
-    handleMouseMove(this);
-    // 悬浮的shape
-    this.hoverShape = getHoverShape(this);
-    // 悬浮的锚点
-    this.hoverAnchor = getHoverAnchor(this);
-    // 计算锚点
-    generateAnchors(this);
-    // 更新鼠标样式
-    this.updateCursor();
-  }
-  // 按下处理器
-  pressHandler = () => {
-    this.mouse.isPressed = true;
-    handleMouseDown(this);
-    // 计算锚点
-    generateAnchors(this);
-    // 更新鼠标样式
-    this.updateCursor();
-  }
-  // 释放处理器
-  releaseHandler = () => {
-    this.mouse.isPressed = false;
-    handleMouseUp(this);
-    // 计算锚点
-    generateAnchors(this);
-    // 更新鼠标样式
-    this.updateCursor();
-  }
-  // 创建鼠标跟踪器
-  createMouseTracker() {
-    this.viewer.canvas.addEventListener("mousemove", this.moveHandler);
-    this.viewer.addHandler("canvas-drag", this.moveHandler);
-    this.viewer.addHandler("canvas-press", this.pressHandler);
-    this.viewer.addHandler("canvas-release", this.releaseHandler);
-  }
-  // 设置模式
-  setMode(mode) {
-    this.mode = mode;
-    this.setPan(mode === this.tools.move);
-    this.cancelSelectShape();
-  }
-  // 设置允许拖动
-  setPan(pan) {
-    this.viewer.panHorizontal = pan;
-    this.viewer.panVertical = pan;
-  }
-  // 销毁
-  destroy() {
-    this.viewer.canvas.removeEventListener("mousemove", this.moveHandler);
-    this.viewer.removeHandler("canvas-drag", this.moveHandler);
-    this.viewer.removeHandler("canvas-press", this.pressHandler);
-    this.viewer.removeHandler("canvas-release", this.releaseHandler);
-    this.pixiApp.canvas.remove();
-    this.pixiApp.destroy();
-  }
-  // 监听键盘
-  listenKeyboard() {
-    onKeyStroke(["Delete"], async (e) => {
-      switch (e.code) {
-        case "Delete":
-          // @ts-ignore
-          if (this.tempShape && this.tempShape.id) {
-            this.conf.onRemove(this.tempShape);
-          }
-          break
-      }
-    });
-  }
-  // 帧循环
-  startLoop() {
-    this.pixiApp.ticker.add(() => {
-      render(this);
-    });
-  }
-  // 生成点
-  generatePoints() {
-    this.points = this.shapes.filter(
-      // @ts-ignore
-      (item) => item.type === this.tools.point && item.id !== this.tempShape?.id
-    );
-    if (this.pointMesh) {
-      this.pixiApp.stage.removeChild(this.pointMesh);
-    }
-    this.pointMesh = this.createPointMesh(this.points);
-    if (this.pointMesh) {
-      this.pixiApp.stage.addChild(this.pointMesh);
-    }
-  }
-  // 添加图形（批量）
-  addShapes(shapes) {
-    const _shapes = _.cloneDeep(shapes);
-    this.shapes.push(..._shapes);
-    for (const shape of _shapes) {
-      this.bounds.insert(getBounds(shape, this));
-    }
-    if (shapes.find((shape) => shape.type === this.tools.point)) {
-      this.generatePoints();
-    }
-  }
-  // 添加图形
-  addShape(shape) {
-    const _shape = _.cloneDeep(shape);
-    this.shapes.push(_shape);
-    this.bounds.insert(getBounds(_shape, this));
-    if (shape.type === this.tools.point) {
-      this.generatePoints();
-    }
-  }
-  // 删除图形（批量）
-  removeShapes(shapes) {
-    const ids = shapes.map((item) => item.id);
-    this.shapes = this.shapes.filter((item) => !ids.includes(item.id));
-    for (const shape of shapes) {
-      this.bounds.remove(getBounds(shape, this), (a, b) => {
-        return a.id === b.id
-      });
-    }
-    if (shapes.find((shape) => shape.type === this.tools.point)) {
-      this.generatePoints();
-    }
-    // @ts-ignore
-    if (shapes.find((shape) => shape.id === this.tempShape?.id)) {
-      this.tempShape = null;
-    }
-  }
-  // 删除图形
-  removeShape(shape) {
-    this.shapes = this.shapes.filter((item) => item.id !== shape.id);
-    this.bounds.remove(getBounds(shape, this), (a, b) => {
-      return a.id === b.id
-    });
-    if (shape.type === this.tools.point) {
-      this.generatePoints();
-    }
-    // @ts-ignore
-    if (shape.id === this.tempShape?.id) {
-      this.tempShape = null;
-    }
-    // 计算锚点
-    generateAnchors(this);
-  }
-  // 更新图形（批量）
-  updateShapes(shapes) {
-    this.removeShapes(shapes);
-    this.addShapes(shapes);
-  }
-  // 更新图形
-  updateShape(shape) {
-    this.removeShape(shape);
-    this.addShape(shape);
-  }
-  // 选择图形
-  selectShape(shape) {
-    this.tempShape = _.cloneDeep(shape);
-    // 计算锚点
-    generateAnchors(this);
-  }
-  // 取消选择图形
-  cancelSelectShape() {
-    // 如果有临时shape则修正bounds位置
-    const originalShape = this.shapes.find(
-      // @ts-ignore
-      (item) => item.id === this.tempShape?.id
-    );
-    if (originalShape) {
-      // 修正临时shape的bounds位置
-      this.correctionTempShapeBounds(originalShape);
-    }
-    this.tempShape = null;
-    this.anchors = [];
-  }
-  // 创建pixi
-  async createPixi() {
-    const osdDom = this.viewer.canvas;
-    const app = new Application();
-    this.pixiApp = app;
-    await app.init({
-      resizeTo: osdDom,
-      backgroundAlpha: 0,
-      antialias: true, // 抗锯齿
-    });
-    // @ts-ignore
-    osdDom.appendChild(app.canvas);
-    app.canvas.style.pointerEvents = "none";
-    app.canvas.style.position = "absolute";
-    app.canvas.style.top = "0";
-    app.canvas.style.left = "0";
+	// 绘图工具列表
+	tools = {
+		move: "move", // 移动
+		rect: "rect", // 矩形
+		polygon: "polygon", // 多边形
+		circle: "circle", // 圆
+		ellipse: "ellipse", // 椭圆
+		path: "path", // 路径
+		closed_path: "closed_path", // 闭合路径
+		line: "line", // 直线
+		arrow_line: "arrow_line", // 箭头直线
+		point: "point", // 点
+	}
+	// 配置
+	conf = {
+		viewer: null,
+	}
+	pixiApp // pixi app
+	graphics // pixi graphics
+	pointMesh // 点的Mesh
+	points = [] // 点集合
+	mode = this.tools.move // 模式
+	viewer // osd的画布
+	shapes = [] // 形状数组
+	bounds // 边界
+	anchors = [] // 锚点数组
+	scale = 1 // 缩放
+	// 平移
+	translate = {
+		x: 0,
+		y: 0,
+	}
+	strokeWidth = 2 // 线宽
+	defaultColor = "#FF0000" // 默认颜色（当shape没有指定颜色时使用此颜色绘制）
+	brushColor = "#FF0000" // 画笔颜色
+	hitRadius = 5 // 光标的碰撞半径
+	anchorRadius = 5 // 锚点半径
+	pointRadius = 6 // 点半径
+	tempShape = null // 临时shape（新增和编辑时）
+	hoverShape = null // 悬浮的shape
+	hoverAnchor = null // 悬浮的锚点
+	readonly = false // 只读模式
+	// 鼠标
+	mouse = {
+		x: 0, // 视口x
+		y: 0, // 视口y
+		dx: 0, // 画布x
+		dy: 0, // 画布y
+		isPressed: false, // 是否按下
+	}
+	constructor(conf) {
+		// 存储配置
+		this.conf = {
+			...this.conf,
+			...conf,
+		};
+		this.viewer = this.conf.viewer;
+		// 初始化 边界
+		this.createBounds();
+		// 监听键盘
+		this.listenKeyboard()
+		// 画布
+		;(async () => {
+			// 初始化 pxii
+			await this.createPixi();
+			// 初始化 鼠标跟踪器
+			this.createMouseTracker();
+			// 开始循环
+			this.startLoop();
+			// 回调
+			this.conf.onLoad?.();
+		})();
+	}
+	// 清空标注
+	clear() {
+		this.tempShape = null;
+		this.hoverShape = null;
+		this.shapes = [];
+		this.anchors = [];
+		this.bounds.clear();
+		this.generatePoints();
+	}
+	// 初始化边界
+	createBounds() {
+		this.bounds = new RBush();
+	}
+	// 移动处理器
+	moveHandler = (e) => {
+		const viewport = this.viewer.viewport; // osd 视口对象
+		let x, y;
+		if (e.position) {
+			x = e.position.x;
+			y = e.position.y;
+		} else {
+			x = e.offsetX;
+			y = e.offsetY;
+		}
+		const flipped = viewport.getFlip(); // 翻转
+		if (flipped) {
+			x = viewport._containerInnerSize.x - x;
+		}
+		this.mouse.x = x;
+		this.mouse.y = y;
+		const viewportPoint = viewport.pointFromPixel(
+			new osd.Point(this.mouse.x, this.mouse.y),
+			true,
+		);
+		const dp = viewport._viewportToImageDelta(
+			viewportPoint.x - viewport._contentBoundsNoRotate.x,
+			viewportPoint.y - viewport._contentBoundsNoRotate.y,
+		);
+		this.mouse.dx = dp.x;
+		this.mouse.dy = dp.y;
+		handleMouseMove(this);
+		// 悬浮的shape
+		this.hoverShape = getHoverShape(this);
+		// 悬浮的锚点
+		this.hoverAnchor = getHoverAnchor(this);
+		// 计算锚点
+		generateAnchors(this);
+		// 更新鼠标样式
+		this.updateCursor();
+	}
+	// 按下处理器
+	pressHandler = () => {
+		this.mouse.isPressed = true;
+		handleMouseDown(this);
+		// 计算锚点
+		generateAnchors(this);
+		// 更新鼠标样式
+		this.updateCursor();
+	}
+	// 释放处理器
+	releaseHandler = () => {
+		this.mouse.isPressed = false;
+		handleMouseUp(this);
+		// 计算锚点
+		generateAnchors(this);
+		// 更新鼠标样式
+		this.updateCursor();
+	}
+	// 创建鼠标跟踪器
+	createMouseTracker() {
+		this.viewer.canvas.addEventListener("mousemove", this.moveHandler);
+		this.viewer.addHandler("canvas-drag", this.moveHandler);
+		this.viewer.addHandler("canvas-press", this.pressHandler);
+		this.viewer.addHandler("canvas-release", this.releaseHandler);
+	}
+	// 设置模式
+	setMode(mode) {
+		this.mode = mode;
+		this.setPan(mode === this.tools.move);
+		this.cancelSelectShape();
+	}
+	// 设置允许拖动
+	setPan(pan) {
+		this.viewer.panHorizontal = pan;
+		this.viewer.panVertical = pan;
+	}
+	// 销毁
+	destroy() {
+		this.viewer.canvas.removeEventListener("mousemove", this.moveHandler);
+		this.viewer.removeHandler("canvas-drag", this.moveHandler);
+		this.viewer.removeHandler("canvas-press", this.pressHandler);
+		this.viewer.removeHandler("canvas-release", this.releaseHandler);
+		this.pixiApp.canvas.remove();
+		this.pixiApp.destroy(true, true);
+	}
+	// 监听键盘
+	listenKeyboard() {
+		onKeyStroke(["Delete"], async (e) => {
+			switch (e.code) {
+				case "Delete":
+					// @ts-ignore
+					if (this.tempShape && this.tempShape.id) {
+						this.conf.onRemove(this.tempShape);
+					}
+					break
+			}
+		});
+	}
+	// 帧循环
+	startLoop() {
+		this.pixiApp.ticker.add(() => {
+			render(this);
+		});
+	}
+	// 生成点
+	generatePoints() {
+		this.points = this.shapes.filter(
+			// @ts-ignore
+			(item) =>
+				item.type === this.tools.point && item.id !== this.tempShape?.id,
+		);
+		if (this.pointMesh) {
+			this.pixiApp.stage.removeChild(this.pointMesh);
+		}
+		this.pointMesh = this.createPointMesh(this.points);
+		if (this.pointMesh) {
+			this.pixiApp.stage.addChild(this.pointMesh);
+		}
+	}
+	// 添加图形（批量）
+	addShapes(shapes) {
+		const _shapes = _.cloneDeep(shapes);
+		this.shapes.push(..._shapes);
+		for (const shape of _shapes) {
+			this.bounds.insert(getBounds(shape, this));
+		}
+		if (shapes.find((shape) => shape.type === this.tools.point)) {
+			this.generatePoints();
+		}
+	}
+	// 添加图形
+	addShape(shape) {
+		const _shape = _.cloneDeep(shape);
+		this.shapes.push(_shape);
+		this.bounds.insert(getBounds(_shape, this));
+		if (shape.type === this.tools.point) {
+			this.generatePoints();
+		}
+	}
+	// 删除图形（批量）
+	removeShapes(shapes) {
+		const ids = shapes.map((item) => item.id);
+		this.shapes = this.shapes.filter((item) => !ids.includes(item.id));
+		for (const shape of shapes) {
+			this.bounds.remove(getBounds(shape, this), (a, b) => {
+				return a.id === b.id
+			});
+		}
+		if (shapes.find((shape) => shape.type === this.tools.point)) {
+			this.generatePoints();
+		}
+		// @ts-ignore
+		if (shapes.find((shape) => shape.id === this.tempShape?.id)) {
+			this.tempShape = null;
+		}
+		// @ts-ignore
+		if (shapes.find((shape) => shape.id === this.hoverShape?.id)) {
+			this.hoverShape = null;
+		}
+	}
+	// 删除图形
+	removeShape(shape) {
+		this.shapes = this.shapes.filter((item) => item.id !== shape.id);
+		this.bounds.remove(getBounds(shape, this), (a, b) => {
+			return a.id === b.id
+		});
+		if (shape.type === this.tools.point) {
+			this.generatePoints();
+		}
+		// @ts-ignore
+		if (shape.id === this.tempShape?.id) {
+			this.tempShape = null;
+		}
+		// @ts-ignore
+		if (shape.id === this.hoverShape?.id) {
+			this.hoverShape = null;
+		}
+		// 计算锚点
+		generateAnchors(this);
+	}
+	// 更新图形（批量）
+	updateShapes(shapes) {
+		this.removeShapes(shapes);
+		this.addShapes(shapes);
+	}
+	// 更新图形
+	updateShape(shape) {
+		this.removeShape(shape);
+		this.addShape(shape);
+	}
+	// 选择图形
+	selectShape(shape) {
+		this.tempShape = _.cloneDeep(shape);
+		// 计算锚点
+		generateAnchors(this);
+	}
+	// 取消选择图形
+	cancelSelectShape() {
+		// 如果有临时shape则修正bounds位置
+		const originalShape = this.shapes.find(
+			// @ts-ignore
+			(item) => item.id === this.tempShape?.id,
+		);
+		if (originalShape) {
+			// 修正临时shape的bounds位置
+			this.correctionTempShapeBounds(originalShape);
+		}
+		this.tempShape = null;
+		this.anchors = [];
+	}
+	// 创建pixi
+	async createPixi() {
+		const osdDom = this.viewer.canvas;
+		const app = new Application();
+		this.pixiApp = app;
+		await app.init({
+			resizeTo: osdDom,
+			backgroundAlpha: 0,
+			antialias: true, // 抗锯齿
+		});
+		// @ts-ignore
+		osdDom.appendChild(app.canvas);
+		app.canvas.style.pointerEvents = "none";
+		app.canvas.style.position = "absolute";
+		app.canvas.style.top = "0";
+		app.canvas.style.left = "0";
 
-    // 图形
-    const graphics = new Graphics();
-    this.graphics = graphics;
-    app.stage.addChild(graphics);
+		// 图形
+		const graphics = new Graphics();
+		this.graphics = graphics;
+		app.stage.addChild(graphics);
 
-    // 点的Mesh
-    this.generatePoints();
+		// 点的Mesh
+		this.generatePoints();
 
-    // @ts-ignore
-    window.__PIXI_DEVTOOLS__ = {
-      app: app,
-    };
-  }
-  // 获取比例
-  getScale() {
-    const viewer = this.viewer;
-    const containerWidth = viewer.viewport.getContainerSize().x;
-    const zoom = viewer.viewport.getZoom(true);
-    return (zoom * containerWidth) / viewer.world.getContentFactor()
-  }
-  // 解析颜色
-  parseColor(color) {
-    return parseInt(color.replace("#", "0x"), 16)
-  }
-  // 获取所有图形
-  getShapes() {
-    return _.cloneDeep(this.shapes)
-  }
-  // 设置默认颜色
-  setDefaultColor(color) {
-    this.defaultColor = color;
-  }
-  // 设置画笔颜色
-  setBrushColor(color) {
-    this.brushColor = color;
-  }
-  // 更新鼠标样式
-  updateCursor() {
-    let cursor = "default";
-    if (this.mode !== this.tools.move) {
-      // 绘制中，使用十字线
-      cursor = "crosshair";
-    } else if (this.hoverAnchor) {
-      // 悬浮在锚点上
-      cursor = "pointer";
-    } else if (this.hoverShape) {
-      // 悬浮在shape上
-      // @ts-ignore
-      if (this.tempShape && this.hoverShape?.id === this.tempShape?.id) {
-        // 悬浮的shape是编辑状态
-        if (this.mouse.isPressed) {
-          // 按下状态
-          cursor = "grabbing";
-        } else {
-          // 未按下状态
-          cursor = "grab";
-        }
-      } else {
-        // 普通悬浮
-        cursor = "pointer";
-      }
-    }
-    this.viewer.canvas.style.cursor = cursor;
-  }
-  // 创建点Mesh
-  createPointMesh(points) {
-    const length = points.length;
-    if (!length) {
-      return null
-    }
-    const instancePositionBuffer = new Buffer({
-      data: new Float32Array(length * 2),
-      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
-    });
-    const instanceColorBuffer = new Buffer({
-      data: new Float32Array(length * 3), // 每个三角形三个值（r, g, b）
-      usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
-    });
-    const colorData = instanceColorBuffer.data;
-    for (let _i in points) {
-      let i = Number(_i);
-      const point = points[i];
-      point.rgbColor = hexToRGB(point.color || this.defaultColor);
-      const index = i * 3;
-      colorData[index] = point.rgbColor[0];
-      colorData[index + 1] = point.rgbColor[1];
-      colorData[index + 2] = point.rgbColor[2];
-    }
-    instanceColorBuffer.update();
-    const { positions, indices } = generateCircleGeometry(40, this.pointRadius);
-    const geometry = new Geometry({
-      attributes: {
-        aPosition: positions,
-        aPositionOffset: {
-          buffer: instancePositionBuffer,
-          instance: true,
-        },
-        aColor: {
-          buffer: instanceColorBuffer,
-          instance: true,
-        },
-      },
-      indexBuffer: indices,
-      instanceCount: length,
-    });
-    const gl = { vertex, fragment };
-    const shader = Shader.from({
-      gl,
-    });
-    const pointMesh = new Mesh({
-      geometry,
-      shader,
-    });
-    return pointMesh
-  }
-  // 修正临时shape的bounds位置
-  correctionTempShapeBounds = (shape) => {
-    this.bounds.remove(getBounds(shape, this), (a, b) => {
-      return a.id === b.id
-    });
-    this.bounds.insert(getBounds(shape, this));
-  }
-  // 设置只读模式
-  setReadOnly = (readonly) => {
-    this.readonly = readonly;
-    if (this.readonly) {
-      this.cancelSelectShape();
-    }
-  }
-  // 获取一个形状的中心点
-  getShapeCenter(shape) {
-    const { maxX, minX, maxY, minY } = getBounds(shape, this);
-    return {
-      x: (maxX + minX) / 2,
-      y: (maxY + minY) / 2,
-    }
-  }
-  // 移动视野到某个shape
-  moveToShape(shape = null, immediately = false) {
-    if (!shape) return
-    // @ts-ignore
-    if (shape.id === this.tempShape?.id) {
-      shape = this.tempShape;
-    }
-    const viewport = this.viewer.viewport;
-    const center = this.getShapeCenter(shape);
-    const osdPoint = viewport.imageToViewportCoordinates(center.x, center.y);
-    this.viewer.viewport.panTo(osdPoint, immediately);
-  }
+		// @ts-ignore
+		window.__PIXI_DEVTOOLS__ = {
+			app: app,
+		};
+	}
+	// 获取比例
+	getScale() {
+		const viewer = this.viewer;
+		const containerWidth = viewer.viewport.getContainerSize().x;
+		const zoom = viewer.viewport.getZoom(true);
+		return (zoom * containerWidth) / viewer.world.getContentFactor()
+	}
+	// 解析颜色
+	parseColor(color) {
+		return parseInt(color.replace("#", "0x"), 16)
+	}
+	// 获取所有图形
+	getShapes() {
+		return _.cloneDeep(this.shapes)
+	}
+	// 设置默认颜色
+	setDefaultColor(color) {
+		this.defaultColor = color;
+	}
+	// 设置画笔颜色
+	setBrushColor(color) {
+		this.brushColor = color;
+	}
+	// 更新鼠标样式
+	updateCursor() {
+		let cursor = "default";
+		if (this.mode !== this.tools.move) {
+			// 绘制中，使用十字线
+			cursor = "crosshair";
+		} else if (this.hoverAnchor) {
+			// 悬浮在锚点上
+			cursor = "pointer";
+		} else if (this.hoverShape) {
+			// 悬浮在shape上
+			// @ts-ignore
+			if (this.tempShape && this.hoverShape?.id === this.tempShape?.id) {
+				// 悬浮的shape是编辑状态
+				if (this.mouse.isPressed) {
+					// 按下状态
+					cursor = "grabbing";
+				} else {
+					// 未按下状态
+					cursor = "grab";
+				}
+			} else {
+				// 普通悬浮
+				cursor = "pointer";
+			}
+		}
+		this.viewer.canvas.style.cursor = cursor;
+	}
+	// 创建点Mesh
+	createPointMesh(points) {
+		const length = points.length;
+		if (!length) {
+			return null
+		}
+		const instancePositionBuffer = new Buffer({
+			data: new Float32Array(length * 2),
+			usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+		});
+		const instanceColorBuffer = new Buffer({
+			data: new Float32Array(length * 3), // 每个三角形三个值（r, g, b）
+			usage: BufferUsage.VERTEX | BufferUsage.COPY_DST,
+		});
+		const colorData = instanceColorBuffer.data;
+		for (let _i in points) {
+			let i = Number(_i);
+			const point = points[i];
+			point.rgbColor = hexToRGB(point.color || this.defaultColor);
+			const index = i * 3;
+			colorData[index] = point.rgbColor[0];
+			colorData[index + 1] = point.rgbColor[1];
+			colorData[index + 2] = point.rgbColor[2];
+		}
+		instanceColorBuffer.update();
+		const { positions, indices } = generateCircleGeometry(40, this.pointRadius);
+		const geometry = new Geometry({
+			attributes: {
+				aPosition: positions,
+				aPositionOffset: {
+					buffer: instancePositionBuffer,
+					instance: true,
+				},
+				aColor: {
+					buffer: instanceColorBuffer,
+					instance: true,
+				},
+			},
+			indexBuffer: indices,
+			instanceCount: length,
+		});
+		const gl = { vertex, fragment };
+		const shader = Shader.from({
+			gl,
+		});
+		const pointMesh = new Mesh({
+			geometry,
+			shader,
+		});
+		return pointMesh
+	}
+	// 修正临时shape的bounds位置
+	correctionTempShapeBounds = (shape) => {
+		this.bounds.remove(getBounds(shape, this), (a, b) => {
+			return a.id === b.id
+		});
+		this.bounds.insert(getBounds(shape, this));
+	}
+	// 设置只读模式
+	setReadOnly(readonly) {
+		this.readonly = readonly;
+		if (this.readonly) {
+			this.cancelSelectShape();
+		}
+	}
+	// 获取一个形状的中心点
+	getShapeCenter(shape) {
+		const { maxX, minX, maxY, minY } = getBounds(shape, this);
+		return {
+			x: (maxX + minX) / 2,
+			y: (maxY + minY) / 2,
+		}
+	}
+	// 移动视野到某个shape
+	moveToShape(shape = null, immediately = false) {
+		if (!shape) return
+		// @ts-ignore
+		if (shape.id === this.tempShape?.id) {
+			shape = this.tempShape;
+		}
+		const viewport = this.viewer.viewport;
+		const center = this.getShapeCenter(shape);
+		const osdPoint = viewport.imageToViewportCoordinates(center.x, center.y);
+		this.viewer.viewport.panTo(osdPoint, immediately);
+	}
 }
 
 // 创建涂鸦实例
