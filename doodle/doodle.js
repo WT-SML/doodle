@@ -128,11 +128,11 @@ export class Doodle {
 		this.mouse.y = y
 		const viewportPoint = viewport.pointFromPixel(
 			new osd.Point(this.mouse.x, this.mouse.y),
-			true
+			true,
 		)
 		const dp = viewport._viewportToImageDelta(
 			viewportPoint.x - viewport._contentBoundsNoRotate.x,
-			viewportPoint.y - viewport._contentBoundsNoRotate.y
+			viewportPoint.y - viewport._contentBoundsNoRotate.y,
 		)
 		this.mouse.dx = dp.x
 		this.mouse.dy = dp.y
@@ -189,7 +189,7 @@ export class Doodle {
 		this.viewer.removeHandler("canvas-press", this.pressHandler)
 		this.viewer.removeHandler("canvas-release", this.releaseHandler)
 		this.pixiApp.canvas.remove()
-		this.pixiApp.destroy()
+		this.pixiApp.destroy(true, true)
 	}
 	// 监听键盘
 	listenKeyboard() {
@@ -216,7 +216,8 @@ export class Doodle {
 	generatePoints() {
 		this.points = this.shapes.filter(
 			// @ts-ignore
-			(item) => item.type === this.tools.point && item.id !== this.tempShape?.id
+			(item) =>
+				item.type === this.tools.point && item.id !== this.tempShape?.id,
 		)
 		if (this.pointMesh) {
 			this.pixiApp.stage.removeChild(this.pointMesh)
@@ -308,7 +309,7 @@ export class Doodle {
 		// 如果有临时shape则修正bounds位置
 		const originalShape = this.shapes.find(
 			// @ts-ignore
-			(item) => item.id === this.tempShape?.id
+			(item) => item.id === this.tempShape?.id,
 		)
 		if (originalShape) {
 			// 修正临时shape的bounds位置
